@@ -142,3 +142,14 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
 
         return user
+
+class VerifyOTPSerializer(serializers.Serializer):
+
+    user_id = serializers.IntegerField()
+
+    otp = serializers.RegexField(
+        regex=r"^\d{6}$",
+        error_messages={
+            "invalid": "OTP must contain exactly 6 digits."
+        }
+    )
