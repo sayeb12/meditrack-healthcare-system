@@ -1,20 +1,27 @@
 from django.contrib.auth.hashers import check_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.utils import timezone
-from .models import User, VerificationCode
 
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import (
+    AllowAny,
+    IsAuthenticated,
+)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from .models import User, VerificationCode
 from .serializers import (
     RegisterSerializer,
     VerifyOTPSerializer,
+    LoginSerializer,
 )
 from .otp_service import create_verification_code
 from .notification_service import send_otp
-
+from .validators import normalize_bd_phone
 
 class RegisterView(APIView):
 
@@ -222,6 +229,139 @@ class VerifyOTPView(APIView):
             {
                 "message":
                 "Account verified successfully."
+            },
+            status=status.HTTP_200_OK
+        )
+
+class LoginView(APIView):
+
+    permission_classes = [
+        AllowAny
+    ]
+
+    def post(self, request):
+
+        serializer = LoginSerializer(
+            data=request.data
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        identifier = serializer.validated_data[
+            "identifier"
+        ].strip()
+
+        password = serializer.validated_data[
+            "password"
+        ]
+
+        user = None
+
+        # Try email login first
+        if "@" in identifier:
+
+            user = User.objects.filter(
+                email__iexact=identifier
+            ).first()
+
+        else:
+
+            # Otherwise treat the identifier as
+            # a Bangladesh phone number
+            try:
+
+                normalized_phone = normalize_bd_phone(
+                    identifier
+                )
+
+            except DjangoValidationError:
+
+                normalized_phone = None
+
+            if normalized_phone:
+
+                user = User.objects.filter(
+                    phone_number=normalized_phone
+                ).first()
+
+        # Do not reveal whether the account exists
+        if user is None:
+
+            return Response(
+                {
+                    "detail":
+                    "Invalid email/phone number or password."
+                },
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        if not user.check_password(password):
+
+            return Response(
+                {
+                    "detail":
+                    "Invalid email/phone number or password."
+                },
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        if not user.is_active:
+
+            return Response(
+                {
+                    "detail":
+                    "Your account has not been verified."
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response(
+            {
+                "message":
+                    "Login successful.",
+
+                "user": {
+                    "id": user.id,
+                    "full_name": user.full_name,
+                    "email": user.email,
+                    "phone_number": user.phone_number,
+                    "language": user.language,
+                },
+
+                "tokens": {
+                    "access": str(
+                        refresh.access_token
+                    ),
+
+                    "refresh": str(
+                        refresh
+                    ),
+                }
+            },
+            status=status.HTTP_200_OK
+        )
+
+class CurrentUserView(APIView):
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    def get(self, request):
+
+        user = request.user
+
+        return Response(
+            {
+                "id": user.id,
+                "full_name": user.full_name,
+                "email": user.email,
+                "phone_number": user.phone_number,
+                "language": user.language,
             },
             status=status.HTTP_200_OK
         )

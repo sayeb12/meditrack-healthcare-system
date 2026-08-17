@@ -153,3 +153,12 @@ class VerifyOTPSerializer(serializers.Serializer):
             "invalid": "OTP must contain exactly 6 digits."
         }
     )
+
+class LoginSerializer(serializers.Serializer):
+
+    identifier = serializers.CharField()
+
+    password = serializers.CharField(
+        write_only=True,
+        trim_whitespace=False
+    )

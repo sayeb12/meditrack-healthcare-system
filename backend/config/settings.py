@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 
+from datetime import timedelta
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -146,3 +147,15 @@ EMAIL_BACKEND = (
 )
 
 DEFAULT_FROM_EMAIL = "noreply@meditrack.local"
+
+SIMPLE_JWT = {
+
+    "ACCESS_TOKEN_LIFETIME":
+        timedelta(minutes=15),
+
+    "REFRESH_TOKEN_LIFETIME":
+        timedelta(days=7),
+
+    "AUTH_HEADER_TYPES":
+        ("Bearer",),
+}
