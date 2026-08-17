@@ -7,6 +7,7 @@ from .views import (
     VerifyOTPView,
     LoginView,
     CurrentUserView,
+    LogoutView,
 )
 
 
@@ -40,6 +41,12 @@ urlpatterns = [
         "me/",
         CurrentUserView.as_view(),
         name="current-user"
+    ),
+
+    path(
+    "logout/",
+    LogoutView.as_view(),
+    name="logout"
     ),
 
 ]
