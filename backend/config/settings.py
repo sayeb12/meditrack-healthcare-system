@@ -160,3 +160,5 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES":
         ("Bearer",),
 }
+
+PASSWORD_RESET_TIMEOUT = 600

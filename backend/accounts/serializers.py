@@ -162,3 +162,49 @@ class LoginSerializer(serializers.Serializer):
         write_only=True,
         trim_whitespace=False
     )
+
+class ForgotPasswordSerializer(serializers.Serializer):
+
+    identifier = serializers.CharField()
+
+class PasswordResetOTPSerializer(serializers.Serializer):
+
+    identifier = serializers.CharField()
+
+    otp = serializers.RegexField(
+        regex=r"^\d{6}$",
+        error_messages={
+            "invalid":
+                "OTP must contain exactly 6 digits."
+        }
+    )
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+
+    uid = serializers.CharField()
+
+    reset_token = serializers.CharField()
+
+    new_password = serializers.CharField(
+        write_only=True,
+        trim_whitespace=False
+    )
+
+    confirm_password = serializers.CharField(
+        write_only=True,
+        trim_whitespace=False
+    )
+
+    def validate(self, attrs):
+
+        if (
+            attrs["new_password"]
+            != attrs["confirm_password"]
+        ):
+
+            raise serializers.ValidationError({
+                "confirm_password":
+                    "Passwords do not match."
+            })
+
+        return attrs
