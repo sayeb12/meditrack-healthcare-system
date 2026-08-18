@@ -208,3 +208,11 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             })
 
         return attrs
+
+class ResendRegistrationOTPSerializer(serializers.Serializer):
+
+    identifier = serializers.CharField()
+
+    otp_channel = serializers.ChoiceField(
+        choices=["email", "phone"]
+    )

@@ -1,3 +1,5 @@
+from math import ceil
+
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.hashers import check_password
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -35,6 +37,7 @@ from .serializers import (
     ForgotPasswordSerializer,
     PasswordResetOTPSerializer,
     PasswordResetConfirmSerializer,
+    ResendRegistrationOTPSerializer,
 )
 from .otp_service import create_verification_code
 from .notification_service import send_otp
@@ -818,6 +821,122 @@ class PasswordResetConfirmView(APIView):
                 "message":
                     "Password reset successfully. "
                     "Please log in with your new password."
+            },
+            status=status.HTTP_200_OK
+        )
+
+class ResendRegistrationOTPView(APIView):
+
+    permission_classes = [
+        AllowAny
+    ]
+
+    COOLDOWN_SECONDS = 60
+
+    def post(self, request):
+
+        serializer = ResendRegistrationOTPSerializer(
+            data=request.data
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        identifier = serializer.validated_data[
+            "identifier"
+        ]
+
+        otp_channel = serializer.validated_data[
+            "otp_channel"
+        ]
+
+        user = find_user_by_identifier(
+            identifier
+        )
+
+        if user is None:
+
+            return Response(
+                {
+                    "message":
+                        "If an unverified account exists, "
+                        "a new OTP has been sent."
+                },
+                status=status.HTTP_200_OK
+            )
+
+        if user.is_active:
+
+            return Response(
+                {
+                    "detail":
+                        "This account is already verified."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        last_verification = (
+            VerificationCode.objects
+            .filter(
+                user=user,
+                purpose="registration"
+            )
+            .order_by("-created_at")
+            .first()
+        )
+
+        if last_verification:
+
+            elapsed_seconds = (
+                timezone.now()
+                - last_verification.created_at
+            ).total_seconds()
+
+            if elapsed_seconds < self.COOLDOWN_SECONDS:
+
+                retry_after = ceil(
+                    self.COOLDOWN_SECONDS
+                    - elapsed_seconds
+                )
+
+                return Response(
+                    {
+                        "detail":
+                            "Please wait before requesting "
+                            "another OTP.",
+
+                        "retry_after":
+                            retry_after
+                    },
+                    status=status.HTTP_429_TOO_MANY_REQUESTS
+                )
+
+        verification, otp = create_verification_code(
+            user=user,
+            purpose="registration",
+            channel=otp_channel
+        )
+
+        send_otp(
+            user=user,
+            otp=otp,
+            channel=otp_channel
+        )
+
+        return Response(
+            {
+                "message":
+                    "A new verification OTP has been sent.",
+
+                "user_id":
+                    user.id,
+
+                "otp_channel":
+                    otp_channel,
+
+                "resend_available_in":
+                    self.COOLDOWN_SECONDS
             },
             status=status.HTTP_200_OK
         )
