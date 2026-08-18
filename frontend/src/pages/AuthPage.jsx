@@ -4,6 +4,10 @@ import {
     useState,
 } from "react";
 
+import {
+    useNavigate,
+} from "react-router";
+
 import "./AuthPage.css";
 
 import {
@@ -106,9 +110,6 @@ const translations = {
 
         seconds:
             "s",
-
-        loginSuccess:
-            "Login successful.",
 
         registrationSuccess:
             "Registration successful. Please verify your OTP.",
@@ -236,9 +237,6 @@ const translations = {
         seconds:
             " সেকেন্ড পরে",
 
-        loginSuccess:
-            "সফলভাবে সাইন ইন হয়েছে।",
-
         registrationSuccess:
             "রেজিস্ট্রেশন সফল হয়েছে। OTP যাচাই করুন।",
 
@@ -287,11 +285,17 @@ const getErrorMessage = (data) => {
         return "Something went wrong.";
     }
 
-    if (typeof data.detail === "string") {
+    if (
+        typeof data.detail ===
+        "string"
+    ) {
         return data.detail;
     }
 
-    if (typeof data.message === "string") {
+    if (
+        typeof data.message ===
+        "string"
+    ) {
         return data.message;
     }
 
@@ -300,14 +304,17 @@ const getErrorMessage = (data) => {
     Object.values(data).forEach(
         (value) => {
 
-            if (Array.isArray(value)) {
+            if (
+                Array.isArray(value)
+            ) {
                 messages.push(
                     value.join(" ")
                 );
             }
 
             else if (
-                typeof value === "string"
+                typeof value ===
+                "string"
             ) {
                 messages.push(value);
             }
@@ -351,31 +358,46 @@ function PasswordToggle({
 
 function AuthPage() {
 
-    const [isRegister, setIsRegister] =
-        useState(false);
-
-    const [language, setLanguage] =
-        useState("en");
-
-    const t = translations[language];
+    const navigate =
+        useNavigate();
 
 
-    const [loginForm, setLoginForm] =
-        useState({
-            identifier: "",
-            password: "",
-        });
+    const [
+        isRegister,
+        setIsRegister,
+    ] = useState(false);
 
 
-    const [registerForm, setRegisterForm] =
-        useState({
-            full_name: "",
-            email: "",
-            phone_number: "",
-            password: "",
-            confirm_password: "",
-            otp_channel: "email",
-        });
+    const [
+        language,
+        setLanguage,
+    ] = useState("en");
+
+
+    const t =
+        translations[language];
+
+
+    const [
+        loginForm,
+        setLoginForm,
+    ] = useState({
+        identifier: "",
+        password: "",
+    });
+
+
+    const [
+        registerForm,
+        setRegisterForm,
+    ] = useState({
+        full_name: "",
+        email: "",
+        phone_number: "",
+        password: "",
+        confirm_password: "",
+        otp_channel: "email",
+    });
 
 
     const [
@@ -396,64 +418,91 @@ function AuthPage() {
     ] = useState(false);
 
 
-    const [loading, setLoading] =
-        useState(false);
-
-    const [message, setMessage] =
-        useState("");
-
-    const [error, setError] =
-        useState("");
+    const [
+        loading,
+        setLoading,
+    ] = useState(false);
 
 
-    const [otpSession, setOtpSession] =
-        useState(null);
-
-    const [otp, setOtp] =
-        useState("");
-
-    const [resendIn, setResendIn] =
-        useState(0);
+    const [
+        message,
+        setMessage,
+    ] = useState("");
 
 
-    const passwordStrength = useMemo(
-        () =>
-            getPasswordStrength(
-                registerForm.password
-            ),
-        [registerForm.password]
-    );
+    const [
+        error,
+        setError,
+    ] = useState("");
 
 
-    const passwordRules = useMemo(
-        () =>
-            getPasswordRules(
-                registerForm.password
-            ),
-        [registerForm.password]
-    );
+    const [
+        otpSession,
+        setOtpSession,
+    ] = useState(null);
+
+
+    const [
+        otp,
+        setOtp,
+    ] = useState("");
+
+
+    const [
+        resendIn,
+        setResendIn,
+    ] = useState(0);
+
+
+    const passwordStrength =
+        useMemo(
+            () =>
+                getPasswordStrength(
+                    registerForm.password
+                ),
+            [
+                registerForm.password,
+            ]
+        );
+
+
+    const passwordRules =
+        useMemo(
+            () =>
+                getPasswordRules(
+                    registerForm.password
+                ),
+            [
+                registerForm.password,
+            ]
+        );
 
 
     useEffect(() => {
 
-        if (resendIn <= 0) {
+        if (
+            resendIn <= 0
+        ) {
             return;
         }
 
-        const timer = setInterval(
-            () => {
 
-                setResendIn(
-                    (current) =>
-                        Math.max(
-                            current - 1,
-                            0
-                        )
-                );
+        const timer =
+            setInterval(
+                () => {
 
-            },
-            1000
-        );
+                    setResendIn(
+                        (current) =>
+                            Math.max(
+                                current - 1,
+                                0
+                            )
+                    );
+
+                },
+                1000
+            );
+
 
         return () =>
             clearInterval(timer);
@@ -462,6 +511,7 @@ function AuthPage() {
 
 
     const clearFeedback = () => {
+
         setError("");
         setMessage("");
     };
@@ -476,6 +526,7 @@ function AuthPage() {
         setIsRegister(
             registerMode
         );
+
 
         window.scrollTo({
             top: 0,
@@ -492,6 +543,7 @@ function AuthPage() {
             name,
             value,
         } = event.target;
+
 
         setLoginForm(
             (current) => ({
@@ -511,6 +563,7 @@ function AuthPage() {
             value,
         } = event.target;
 
+
         setRegisterForm(
             (current) => ({
                 ...current,
@@ -520,25 +573,38 @@ function AuthPage() {
     };
 
 
-    const handleGeneratePassword = () => {
+    const handleGeneratePassword =
+        () => {
 
-        const generated =
-            generateSecurePassword();
+            const generated =
+                generateSecurePassword();
 
-        setRegisterForm(
-            (current) => ({
-                ...current,
-                password: generated,
-                confirm_password: generated,
-            })
-        );
 
-        setShowRegisterPassword(true);
+            setRegisterForm(
+                (current) => ({
+                    ...current,
 
-        setShowConfirmPassword(true);
+                    password:
+                        generated,
 
-        clearFeedback();
-    };
+                    confirm_password:
+                        generated,
+                })
+            );
+
+
+            setShowRegisterPassword(
+                true
+            );
+
+
+            setShowConfirmPassword(
+                true
+            );
+
+
+            clearFeedback();
+        };
 
 
     const handleLogin = async (
@@ -568,31 +634,38 @@ function AuthPage() {
 
         try {
 
-            const response = await fetch(
-                `${API_BASE}/auth/login/`,
-                {
-                    method: "POST",
+            const response =
+                await fetch(
+                    `${API_BASE}/auth/login/`,
+                    {
+                        method:
+                            "POST",
 
-                    headers: {
-                        "Content-Type":
-                            "application/json",
-                    },
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                        },
 
-                    body: JSON.stringify(
-                        loginForm
-                    ),
-                }
-            );
+                        body:
+                            JSON.stringify(
+                                loginForm
+                            ),
+                    }
+                );
 
 
             const data =
                 await response.json();
 
 
-            if (!response.ok) {
+            if (
+                !response.ok
+            ) {
 
                 setError(
-                    getErrorMessage(data)
+                    getErrorMessage(
+                        data
+                    )
                 );
 
                 return;
@@ -619,14 +692,11 @@ function AuthPage() {
             );
 
 
-            setMessage(
-                t.loginSuccess
-            );
-
-
-            console.log(
-                "Logged in user:",
-                data.user
+            navigate(
+                "/dashboard",
+                {
+                    replace: true,
+                }
             );
 
         }
@@ -730,32 +800,39 @@ function AuthPage() {
 
         try {
 
-            const response = await fetch(
-                `${API_BASE}/auth/register/`,
-                {
-                    method: "POST",
+            const response =
+                await fetch(
+                    `${API_BASE}/auth/register/`,
+                    {
+                        method:
+                            "POST",
 
-                    headers: {
-                        "Content-Type":
-                            "application/json",
-                    },
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                        },
 
-                    body: JSON.stringify({
-                        ...registerForm,
-                        language,
-                    }),
-                }
-            );
+                        body:
+                            JSON.stringify({
+                                ...registerForm,
+                                language,
+                            }),
+                    }
+                );
 
 
             const data =
                 await response.json();
 
 
-            if (!response.ok) {
+            if (
+                !response.ok
+            ) {
 
                 setError(
-                    getErrorMessage(data)
+                    getErrorMessage(
+                        data
+                    )
                 );
 
                 return;
@@ -763,7 +840,8 @@ function AuthPage() {
 
 
             const identifier =
-                registerForm.otp_channel ===
+                registerForm
+                    .otp_channel ===
                 "email"
                     ? registerForm.email
                     : registerForm.phone_number;
@@ -783,6 +861,7 @@ function AuthPage() {
             setOtp("");
 
             setResendIn(60);
+
 
             setMessage(
                 t.registrationSuccess
@@ -830,34 +909,41 @@ function AuthPage() {
 
         try {
 
-            const response = await fetch(
-                `${API_BASE}/auth/verify-otp/`,
-                {
-                    method: "POST",
+            const response =
+                await fetch(
+                    `${API_BASE}/auth/verify-otp/`,
+                    {
+                        method:
+                            "POST",
 
-                    headers: {
-                        "Content-Type":
-                            "application/json",
-                    },
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                        },
 
-                    body: JSON.stringify({
-                        user_id:
-                            otpSession.userId,
+                        body:
+                            JSON.stringify({
+                                user_id:
+                                    otpSession.userId,
 
-                        otp,
-                    }),
-                }
-            );
+                                otp,
+                            }),
+                    }
+                );
 
 
             const data =
                 await response.json();
 
 
-            if (!response.ok) {
+            if (
+                !response.ok
+            ) {
 
                 setError(
-                    getErrorMessage(data)
+                    getErrorMessage(
+                        data
+                    )
                 );
 
                 return;
@@ -877,7 +963,10 @@ function AuthPage() {
             });
 
 
-            setIsRegister(false);
+            setIsRegister(
+                false
+            );
+
 
             setMessage(
                 data.message
@@ -899,95 +988,103 @@ function AuthPage() {
     };
 
 
-    const handleResendOTP = async () => {
+    const handleResendOTP =
+        async () => {
 
-        if (
-            !otpSession ||
-            resendIn > 0
-        ) {
-
-            return;
-        }
-
-
-        clearFeedback();
-
-        setLoading(true);
-
-
-        try {
-
-            const response = await fetch(
-                `${API_BASE}/auth/resend-registration-otp/`,
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json",
-                    },
-
-                    body: JSON.stringify({
-                        identifier:
-                            otpSession.identifier,
-
-                        otp_channel:
-                            otpSession.otpChannel,
-                    }),
-                }
-            );
-
-
-            const data =
-                await response.json();
-
-
-            if (!response.ok) {
-
-                if (
-                    response.status ===
-                    429
-                ) {
-
-                    setResendIn(
-                        data.retry_after ||
-                        60
-                    );
-                }
-
-
-                setError(
-                    getErrorMessage(data)
-                );
+            if (
+                !otpSession ||
+                resendIn > 0
+            ) {
 
                 return;
             }
 
 
-            setResendIn(
-                data.resend_available_in ||
-                60
-            );
+            clearFeedback();
+
+            setLoading(true);
 
 
-            setMessage(
-                data.message
-            );
+            try {
 
-        }
+                const response =
+                    await fetch(
+                        `${API_BASE}/auth/resend-registration-otp/`,
+                        {
+                            method:
+                                "POST",
 
-        catch {
+                            headers: {
+                                "Content-Type":
+                                    "application/json",
+                            },
 
-            setError(
-                t.connectionError
-            );
-        }
+                            body:
+                                JSON.stringify({
+                                    identifier:
+                                        otpSession.identifier,
 
-        finally {
+                                    otp_channel:
+                                        otpSession.otpChannel,
+                                }),
+                        }
+                    );
 
-            setLoading(false);
-        }
-    };
+
+                const data =
+                    await response.json();
+
+
+                if (
+                    !response.ok
+                ) {
+
+                    if (
+                        response.status ===
+                        429
+                    ) {
+
+                        setResendIn(
+                            data.retry_after ||
+                            60
+                        );
+                    }
+
+
+                    setError(
+                        getErrorMessage(
+                            data
+                        )
+                    );
+
+                    return;
+                }
+
+
+                setResendIn(
+                    data.resend_available_in ||
+                    60
+                );
+
+
+                setMessage(
+                    data.message
+                );
+
+            }
+
+            catch {
+
+                setError(
+                    t.connectionError
+                );
+            }
+
+            finally {
+
+                setLoading(false);
+            }
+        };
 
 
     return (
@@ -1009,8 +1106,11 @@ function AuthPage() {
                             MediTrack
                         </strong>
 
+
                         <span>
-                            {t.brandSubtitle}
+                            {
+                                t.brandSubtitle
+                            }
                         </span>
 
                     </div>
@@ -1023,12 +1123,15 @@ function AuthPage() {
                     <button
                         type="button"
                         className={
-                            language === "en"
+                            language ===
+                            "en"
                                 ? "active"
                                 : ""
                         }
                         onClick={() =>
-                            setLanguage("en")
+                            setLanguage(
+                                "en"
+                            )
                         }
                     >
                         EN
@@ -1038,12 +1141,15 @@ function AuthPage() {
                     <button
                         type="button"
                         className={
-                            language === "bn"
+                            language ===
+                            "bn"
                                 ? "active"
                                 : ""
                         }
                         onClick={() =>
-                            setLanguage("bn")
+                            setLanguage(
+                                "bn"
+                            )
                         }
                     >
                         বাংলা
@@ -1083,12 +1189,16 @@ function AuthPage() {
 
 
                         <p className="form-subtitle">
-                            {t.welcomeText}
+                            {
+                                t.welcomeText
+                            }
                         </p>
 
 
                         <label>
-                            {t.emailOrPhone}
+                            {
+                                t.emailOrPhone
+                            }
                         </label>
 
 
@@ -1136,7 +1246,9 @@ function AuthPage() {
                                 }
                                 onClick={() =>
                                     setShowLoginPassword(
-                                        (value) =>
+                                        (
+                                            value
+                                        ) =>
                                             !value
                                     )
                                 }
@@ -1150,7 +1262,9 @@ function AuthPage() {
                             type="button"
                             className="forgot-button"
                         >
-                            {t.forgotPassword}
+                            {
+                                t.forgotPassword
+                            }
                         </button>
 
 
@@ -1170,7 +1284,9 @@ function AuthPage() {
                             !otpSession && (
 
                                 <div className="alert success">
-                                    {message}
+                                    {
+                                        message
+                                    }
                                 </div>
 
                             )}
@@ -1179,7 +1295,9 @@ function AuthPage() {
                         <button
                             type="submit"
                             className="primary-button"
-                            disabled={loading}
+                            disabled={
+                                loading
+                            }
                         >
                             {
                                 loading
@@ -1192,14 +1310,18 @@ function AuthPage() {
                         <div className="mobile-auth-switch">
 
                             <span>
-                                {t.noAccount}
+                                {
+                                    t.noAccount
+                                }
                             </span>
 
 
                             <button
                                 type="button"
                                 onClick={() =>
-                                    switchMode(true)
+                                    switchMode(
+                                        true
+                                    )
                                 }
                             >
                                 {t.signUp}
@@ -1226,7 +1348,9 @@ function AuthPage() {
 
 
                         <h1>
-                            {t.createAccount}
+                            {
+                                t.createAccount
+                            }
                         </h1>
 
 
@@ -1379,7 +1503,9 @@ function AuthPage() {
                                 }
                                 onClick={() =>
                                     setShowRegisterPassword(
-                                        (value) =>
+                                        (
+                                            value
+                                        ) =>
                                             !value
                                     )
                                 }
@@ -1412,7 +1538,9 @@ function AuthPage() {
 
 
                         <p className="password-hint">
-                            {t.passwordRecommendation}
+                            {
+                                t.passwordRecommendation
+                            }
                         </p>
 
 
@@ -1423,12 +1551,16 @@ function AuthPage() {
                                 handleGeneratePassword
                             }
                         >
-                            {t.generatePassword}
+                            {
+                                t.generatePassword
+                            }
                         </button>
 
 
                         <label>
-                            {t.confirmPassword}
+                            {
+                                t.confirmPassword
+                            }
                         </label>
 
 
@@ -1457,7 +1589,9 @@ function AuthPage() {
                                 }
                                 onClick={() =>
                                     setShowConfirmPassword(
-                                        (value) =>
+                                        (
+                                            value
+                                        ) =>
                                             !value
                                     )
                                 }
@@ -1470,7 +1604,9 @@ function AuthPage() {
                         <div className="otp-method">
 
                             <span>
-                                {t.otpMethod}
+                                {
+                                    t.otpMethod
+                                }
                             </span>
 
 
@@ -1489,7 +1625,9 @@ function AuthPage() {
                                     }
                                 />
 
-                                {t.emailOption}
+                                {
+                                    t.emailOption
+                                }
 
                             </label>
 
@@ -1509,7 +1647,9 @@ function AuthPage() {
                                     }
                                 />
 
-                                {t.phoneOption}
+                                {
+                                    t.phoneOption
+                                }
 
                             </label>
 
@@ -1530,7 +1670,9 @@ function AuthPage() {
                         <button
                             type="submit"
                             className="primary-button"
-                            disabled={loading}
+                            disabled={
+                                loading
+                            }
                         >
                             {
                                 loading
@@ -1543,14 +1685,18 @@ function AuthPage() {
                         <div className="mobile-auth-switch">
 
                             <span>
-                                {t.alreadyAccount}
+                                {
+                                    t.alreadyAccount
+                                }
                             </span>
 
 
                             <button
                                 type="button"
                                 onClick={() =>
-                                    switchMode(false)
+                                    switchMode(
+                                        false
+                                    )
                                 }
                             >
                                 {t.signIn}
@@ -1575,12 +1721,16 @@ function AuthPage() {
 
 
                             <h2>
-                                {t.welcomeBack}
+                                {
+                                    t.welcomeBack
+                                }
                             </h2>
 
 
                             <p>
-                                {t.welcomeText}
+                                {
+                                    t.welcomeText
+                                }
                             </p>
 
 
@@ -1588,7 +1738,9 @@ function AuthPage() {
                                 type="button"
                                 className="ghost-button"
                                 onClick={() =>
-                                    switchMode(false)
+                                    switchMode(
+                                        false
+                                    )
                                 }
                             >
                                 {t.signIn}
@@ -1610,7 +1762,9 @@ function AuthPage() {
 
 
                             <p>
-                                {t.newHereText}
+                                {
+                                    t.newHereText
+                                }
                             </p>
 
 
@@ -1618,7 +1772,9 @@ function AuthPage() {
                                 type="button"
                                 className="ghost-button"
                                 onClick={() =>
-                                    switchMode(true)
+                                    switchMode(
+                                        true
+                                    )
                                 }
                             >
                                 {t.signUp}
@@ -1645,12 +1801,16 @@ function AuthPage() {
 
 
                         <h2>
-                            {t.verifyAccount}
+                            {
+                                t.verifyAccount
+                            }
                         </h2>
 
 
                         <p>
-                            {t.otpDescription}
+                            {
+                                t.otpDescription
+                            }
                         </p>
 
 
@@ -1667,13 +1827,14 @@ function AuthPage() {
                                 maxLength="6"
                                 value={otp}
                                 onChange={
-                                    (event) =>
+                                    (
+                                        event
+                                    ) =>
                                         setOtp(
-                                            event.target.value
-                                                .replace(
-                                                    /\D/g,
-                                                    ""
-                                                )
+                                            event.target.value.replace(
+                                                /\D/g,
+                                                ""
+                                            )
                                         )
                                 }
                                 placeholder="000000"
@@ -1692,7 +1853,9 @@ function AuthPage() {
                             {message && (
 
                                 <div className="alert success">
-                                    {message}
+                                    {
+                                        message
+                                    }
                                 </div>
 
                             )}
@@ -1701,7 +1864,9 @@ function AuthPage() {
                             <button
                                 type="submit"
                                 className="primary-button"
-                                disabled={loading}
+                                disabled={
+                                    loading
+                                }
                             >
                                 {
                                     loading
@@ -1717,7 +1882,8 @@ function AuthPage() {
                             type="button"
                             className="resend-button"
                             disabled={
-                                resendIn > 0 ||
+                                resendIn >
+                                    0 ||
                                 loading
                             }
                             onClick={
