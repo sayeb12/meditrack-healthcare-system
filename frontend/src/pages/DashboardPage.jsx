@@ -26,11 +26,9 @@ const getStoredUser = () => {
                 "meditrack_user"
             );
 
-
         if (!storedUser) {
             return null;
         }
-
 
         return JSON.parse(
             storedUser
@@ -39,7 +37,6 @@ const getStoredUser = () => {
     }
 
     catch {
-
         return null;
     }
 };
@@ -125,6 +122,7 @@ const formatAppointmentDate = (
 
 
     return {
+
         day:
             date.toLocaleDateString(
                 undefined,
@@ -201,7 +199,9 @@ function DashboardPage() {
         const loadDashboardData =
             async () => {
 
-                setLoading(true);
+                setLoading(
+                    true
+                );
 
                 setError("");
 
@@ -297,6 +297,7 @@ function DashboardPage() {
                     if (
                         !cancelled
                     ) {
+
                         setLoading(
                             false
                         );
@@ -374,6 +375,7 @@ function DashboardPage() {
                                 appointment.status !==
                                 "scheduled"
                             ) {
+
                                 return false;
                             }
 
@@ -564,6 +566,14 @@ function DashboardPage() {
                     <button
                         type="button"
                         className="nav-item"
+                        onClick={() => {
+
+                            closeMobileMenu();
+
+                            navigate(
+                                "/patients"
+                            );
+                        }}
                     >
 
                         <span className="nav-icon">
@@ -572,10 +582,6 @@ function DashboardPage() {
 
                         <span>
                             Patients
-                        </span>
-
-                        <span className="nav-tag">
-                            Soon
                         </span>
 
                     </button>
@@ -631,9 +637,7 @@ function DashboardPage() {
 
                             {
                                 user?.full_name
-                                    ?.charAt(
-                                        0
-                                    )
+                                    ?.charAt(0)
                                     ?.toUpperCase() ||
                                 "U"
                             }
@@ -718,9 +722,7 @@ function DashboardPage() {
 
                             {
                                 user?.full_name
-                                    ?.charAt(
-                                        0
-                                    )
+                                    ?.charAt(0)
                                     ?.toUpperCase() ||
                                 "U"
                             }
@@ -790,9 +792,7 @@ function DashboardPage() {
                 {error && (
 
                     <div className="dashboard-error">
-
                         {error}
-
                     </div>
 
                 )}
