@@ -30,4 +30,9 @@ urlpatterns = [
         include("accounts.urls")
     ),
 
+    path(
+    "api/patients/",
+    include("patients.urls")
+    ),
+
 ]
