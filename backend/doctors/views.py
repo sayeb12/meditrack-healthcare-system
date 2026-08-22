@@ -3,10 +3,30 @@ from rest_framework.permissions import IsAuthenticated
 
 from .models import Doctor
 from .permissions import IsStaffOrReadOnly
-from .serializers import DoctorSerializer
+from .serializers import (
+    DoctorReadSerializer,
+    DoctorWriteSerializer,
+)
+
+
+class DoctorSerializerSelectionMixin:
+
+    serializer_class = DoctorReadSerializer
+
+    def get_serializer_class(self):
+
+        if self.request.method in {
+            "POST",
+            "PUT",
+            "PATCH",
+        }:
+            return DoctorWriteSerializer
+
+        return DoctorReadSerializer
 
 
 class DoctorListCreateView(
+    DoctorSerializerSelectionMixin,
     generics.ListCreateAPIView
 ):
     queryset = (
@@ -16,8 +36,6 @@ class DoctorListCreateView(
         .order_by("user__full_name")
     )
 
-    serializer_class = DoctorSerializer
-
     permission_classes = [
         IsAuthenticated,
         IsStaffOrReadOnly,
@@ -25,6 +43,7 @@ class DoctorListCreateView(
 
 
 class DoctorRetrieveUpdateDeleteView(
+    DoctorSerializerSelectionMixin,
     generics.RetrieveUpdateDestroyAPIView
 ):
     queryset = (
@@ -32,8 +51,6 @@ class DoctorRetrieveUpdateDeleteView(
         .select_related("user")
         .all()
     )
-
-    serializer_class = DoctorSerializer
 
     permission_classes = [
         IsAuthenticated,
