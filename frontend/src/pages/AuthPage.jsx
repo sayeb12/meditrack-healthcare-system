@@ -1259,13 +1259,18 @@ function AuthPage() {
 
 
                         <button
-                            type="button"
-                            className="forgot-button"
-                        >
-                            {
-                                t.forgotPassword
-                            }
-                        </button>
+    type="button"
+    className="forgot-button"
+    onClick={() =>
+        navigate(
+            "/forgot-password"
+        )
+    }
+>
+    {
+        t.forgotPassword
+    }
+</button>
 
 
                         {error &&

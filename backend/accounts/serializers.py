@@ -216,3 +216,7 @@ class ResendRegistrationOTPSerializer(serializers.Serializer):
     otp_channel = serializers.ChoiceField(
         choices=["email", "phone"]
     )
+
+class ResendPasswordResetOTPSerializer(serializers.Serializer):
+
+    identifier = serializers.CharField()

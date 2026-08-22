@@ -38,6 +38,7 @@ from .serializers import (
     PasswordResetOTPSerializer,
     PasswordResetConfirmSerializer,
     ResendRegistrationOTPSerializer,
+    ResendPasswordResetOTPSerializer,
 )
 from .otp_service import create_verification_code
 from .notification_service import send_otp
@@ -934,6 +935,125 @@ class ResendRegistrationOTPView(APIView):
 
                 "otp_channel":
                     otp_channel,
+
+                "resend_available_in":
+                    self.COOLDOWN_SECONDS
+            },
+            status=status.HTTP_200_OK
+        )
+
+class ResendPasswordResetOTPView(APIView):
+
+    permission_classes = [
+        AllowAny
+    ]
+
+
+    COOLDOWN_SECONDS = 60
+
+
+    def post(self, request):
+
+        serializer = ResendPasswordResetOTPSerializer(
+            data=request.data
+        )
+
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+
+        identifier = serializer.validated_data[
+            "identifier"
+        ]
+
+
+        user = find_user_by_identifier(
+            identifier
+        )
+
+
+        if user is None or not user.is_active:
+
+            return Response(
+                {
+                    "message":
+                        "If an active account exists "
+                        "for that email or phone number, "
+                        "a new password reset OTP has been sent."
+                },
+                status=status.HTTP_200_OK
+            )
+
+
+        last_verification = (
+            VerificationCode.objects
+            .filter(
+                user=user,
+                purpose="password_reset"
+            )
+            .order_by("-created_at")
+            .first()
+        )
+
+
+        if last_verification:
+
+            elapsed_seconds = (
+                timezone.now()
+                -
+                last_verification.created_at
+            ).total_seconds()
+
+
+            if elapsed_seconds < self.COOLDOWN_SECONDS:
+
+                retry_after = ceil(
+                    self.COOLDOWN_SECONDS
+                    -
+                    elapsed_seconds
+                )
+
+
+                return Response(
+                    {
+                        "detail":
+                            "Please wait before requesting "
+                            "another OTP.",
+
+                        "retry_after":
+                            retry_after
+                    },
+                    status=status.HTTP_429_TOO_MANY_REQUESTS
+                )
+
+
+        channel = (
+            "email"
+            if "@" in identifier
+            else "phone"
+        )
+
+
+        verification, otp = create_verification_code(
+            user=user,
+            purpose="password_reset",
+            channel=channel
+        )
+
+
+        send_otp(
+            user=user,
+            otp=otp,
+            channel=channel
+        )
+
+
+        return Response(
+            {
+                "message":
+                    "A new password reset OTP has been sent.",
 
                 "resend_available_in":
                     self.COOLDOWN_SECONDS

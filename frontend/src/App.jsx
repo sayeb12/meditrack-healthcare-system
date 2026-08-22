@@ -10,6 +10,9 @@ import ProtectedRoute
 import AuthPage
     from "./pages/AuthPage";
 
+import ForgotPasswordPage
+    from "./pages/ForgotPasswordPage";
+
 import DashboardPage
     from "./pages/DashboardPage";
 
@@ -24,13 +27,23 @@ import AppointmentsPage
 
 
 function App() {
+
     return (
+
         <Routes>
 
             <Route
                 path="/"
                 element={
                     <AuthPage />
+                }
+            />
+
+
+            <Route
+                path="/forgot-password"
+                element={
+                    <ForgotPasswordPage />
                 }
             />
 
@@ -86,6 +99,7 @@ function App() {
             />
 
         </Routes>
+
     );
 }
 

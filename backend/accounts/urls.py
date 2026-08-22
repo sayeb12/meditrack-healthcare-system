@@ -12,6 +12,7 @@ from .views import (
     VerifyPasswordResetOTPView,
     PasswordResetConfirmView,
     ResendRegistrationOTPView,
+    ResendPasswordResetOTPView,
 )
 
 
@@ -75,6 +76,12 @@ urlpatterns = [
     "resend-registration-otp/",
     ResendRegistrationOTPView.as_view(),
     name="resend-registration-otp"
+    ),
+
+    path(
+    "resend-password-reset-otp/",
+    ResendPasswordResetOTPView.as_view(),
+    name="resend-password-reset-otp"
     ),
 
 ]
