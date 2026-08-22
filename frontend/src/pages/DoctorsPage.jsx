@@ -213,7 +213,7 @@ function DoctorsPage() {
                         const values = [
                             doctor.full_name,
                             doctor.email,
-                            doctor.phone,
+                            doctor.phone_number,
                             doctor.specialization,
                             doctor.license_number,
                         ];
@@ -808,7 +808,7 @@ function DoctorsPage() {
 
                                                                             <strong>
                                                                                 {
-                                                                                    doctor.phone ||
+                                                                                    doctor.phone_number ||
                                                                                     "No phone"
                                                                                 }
                                                                             </strong>
@@ -1009,7 +1009,7 @@ function DoctorsPage() {
 
                                                                     <strong>
                                                                         {
-                                                                            doctor.phone ||
+                                                                            doctor.phone_number ||
                                                                             "Not provided"
                                                                         }
                                                                     </strong>
@@ -1188,7 +1188,7 @@ function DoctorsPage() {
 
                                 <strong>
                                     {
-                                        selectedDoctor.phone ||
+                                        selectedDoctor.phone_number ||
                                         "Not provided"
                                     }
                                 </strong>
