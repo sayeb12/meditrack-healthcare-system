@@ -1,9 +1,13 @@
+from datetime import date, time, timedelta
+
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from accounts.models import User
+from appointments.models import Appointment
+from patients.models import Patient
 
 from .models import Doctor
 
@@ -78,6 +82,7 @@ class DoctorAPITests(TestCase):
                 "license_number",
                 "experience_years",
                 "is_available",
+                "is_archived",
                 "created_at",
                 "updated_at",
             }
@@ -107,6 +112,7 @@ class DoctorAPITests(TestCase):
             response.data["phone_number"],
             user.phone_number
         )
+        self.assertFalse(response.data["is_archived"])
 
     def test_create_rejects_inactive_user(self):
 
@@ -200,4 +206,126 @@ class DoctorAPITests(TestCase):
         self.assertEqual(
             self.doctor.user_id,
             self.doctor_user.pk
+        )
+
+    def test_archived_doctors_are_excluded_from_list(self):
+
+        self.doctor.is_archived = True
+        self.doctor.save(
+            update_fields=["is_archived"]
+        )
+
+        response = self.client.get(
+            reverse("doctor-list-create")
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertEqual(response.data, [])
+
+    def test_delete_archives_doctor_without_deleting_it(self):
+
+        response = self.client.delete(
+            reverse(
+                "doctor-detail",
+                args=[self.doctor.pk]
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_204_NO_CONTENT
+        )
+
+        self.doctor.refresh_from_db()
+        self.assertTrue(self.doctor.is_archived)
+
+    def test_staff_can_update_archive_status(self):
+
+        response = self.client.patch(
+            reverse(
+                "doctor-detail",
+                args=[self.doctor.pk]
+            ),
+            {
+                "is_archived": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
+        self.doctor.refresh_from_db()
+        self.assertTrue(self.doctor.is_archived)
+
+    def test_non_staff_cannot_update_archive_status(self):
+
+        self.client.force_authenticate(
+            user=self.doctor_user
+        )
+
+        response = self.client.patch(
+            reverse(
+                "doctor-detail",
+                args=[self.doctor.pk]
+            ),
+            {
+                "is_archived": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN
+        )
+        self.doctor.refresh_from_db()
+        self.assertFalse(self.doctor.is_archived)
+
+    def test_appointments_remain_after_doctor_is_archived(self):
+
+        patient = Patient.objects.create(
+            created_by=self.staff_user,
+            full_name="Test Patient",
+            gender="other",
+            phone_number="+8801700000006",
+        )
+
+        appointment = Appointment.objects.create(
+            created_by=self.staff_user,
+            patient=patient,
+            doctor=self.doctor,
+            appointment_date=(
+                date.today()
+                + timedelta(days=1)
+            ),
+            appointment_time=time(10, 0),
+        )
+
+        response = self.client.delete(
+            reverse(
+                "doctor-detail",
+                args=[self.doctor.pk]
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_204_NO_CONTENT
+        )
+        self.assertTrue(
+            Doctor.objects.filter(
+                pk=self.doctor.pk,
+                is_archived=True,
+            ).exists()
+        )
+        self.assertTrue(
+            Appointment.objects.filter(
+                pk=appointment.pk,
+                doctor=self.doctor,
+            ).exists()
         )

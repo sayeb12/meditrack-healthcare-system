@@ -32,7 +32,7 @@ class DoctorListCreateView(
     queryset = (
         Doctor.objects
         .select_related("user")
-        .all()
+        .filter(is_archived=False)
         .order_by("user__full_name")
     )
 
@@ -56,3 +56,13 @@ class DoctorRetrieveUpdateDeleteView(
         IsAuthenticated,
         IsStaffOrReadOnly,
     ]
+
+    def perform_destroy(self, instance):
+
+        instance.is_archived = True
+        instance.save(
+            update_fields=[
+                "is_archived",
+                "updated_at",
+            ]
+        )

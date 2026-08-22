@@ -33,6 +33,7 @@ class DoctorReadSerializer(serializers.ModelSerializer):
             "license_number",
             "experience_years",
             "is_available",
+            "is_archived",
             "created_at",
             "updated_at",
         ]
@@ -47,6 +48,7 @@ class DoctorReadSerializer(serializers.ModelSerializer):
             "license_number",
             "experience_years",
             "is_available",
+            "is_archived",
             "created_at",
             "updated_at",
         ]
@@ -92,3 +94,9 @@ class DoctorWriteSerializer(DoctorReadSerializer):
             )
 
         return user
+
+    def create(self, validated_data):
+
+        validated_data["is_archived"] = False
+
+        return super().create(validated_data)
