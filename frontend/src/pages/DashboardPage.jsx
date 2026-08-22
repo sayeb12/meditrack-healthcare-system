@@ -18,9 +18,7 @@ import "./DashboardPage.css";
 
 
 const getStoredUser = () => {
-
     try {
-
         const storedUser =
             localStorage.getItem(
                 "meditrack_user"
@@ -33,7 +31,6 @@ const getStoredUser = () => {
         return JSON.parse(
             storedUser
         );
-
     }
 
     catch {
@@ -45,7 +42,6 @@ const getStoredUser = () => {
 const normalizeList = (
     data
 ) => {
-
     if (
         Array.isArray(data)
     ) {
@@ -69,7 +65,6 @@ const normalizeList = (
 const formatTime = (
     time
 ) => {
-
     if (!time) {
         return "";
     }
@@ -106,7 +101,6 @@ const formatTime = (
 const formatAppointmentDate = (
     dateString
 ) => {
-
     if (!dateString) {
         return {
             day: "",
@@ -122,7 +116,6 @@ const formatAppointmentDate = (
 
 
     return {
-
         day:
             date.toLocaleDateString(
                 undefined,
@@ -143,7 +136,6 @@ const formatAppointmentDate = (
 
 
 function DashboardPage() {
-
     const navigate =
         useNavigate();
 
@@ -191,7 +183,6 @@ function DashboardPage() {
 
 
     useEffect(() => {
-
         let cancelled =
             false;
 
@@ -207,7 +198,6 @@ function DashboardPage() {
 
 
                 try {
-
                     const [
                         patientData,
                         doctorData,
@@ -252,13 +242,11 @@ function DashboardPage() {
                             appointmentData
                         )
                     );
-
                 }
 
                 catch (
                     requestError
                 ) {
-
                     if (cancelled) {
                         return;
                     }
@@ -268,18 +256,14 @@ function DashboardPage() {
                         requestError.status ===
                         401
                     ) {
-
                         clearAuthSession();
-
 
                         navigate(
                             "/",
                             {
-                                replace:
-                                    true,
+                                replace: true,
                             }
                         );
-
 
                         return;
                     }
@@ -289,15 +273,12 @@ function DashboardPage() {
                         requestError.message ||
                         "Unable to load dashboard data."
                     );
-
                 }
 
                 finally {
-
                     if (
                         !cancelled
                     ) {
-
                         setLoading(
                             false
                         );
@@ -310,7 +291,6 @@ function DashboardPage() {
 
 
         return () => {
-
             cancelled =
                 true;
         };
@@ -360,7 +340,6 @@ function DashboardPage() {
     const upcomingAppointments =
         useMemo(
             () => {
-
                 const now =
                     new Date();
 
@@ -370,12 +349,10 @@ function DashboardPage() {
                         (
                             appointment
                         ) => {
-
                             if (
                                 appointment.status !==
                                 "scheduled"
                             ) {
-
                                 return false;
                             }
 
@@ -397,7 +374,6 @@ function DashboardPage() {
                             first,
                             second
                         ) => {
-
                             const firstDate =
                                 new Date(
                                     `${first.appointment_date}T${first.appointment_time}`
@@ -420,7 +396,6 @@ function DashboardPage() {
                         0,
                         5
                     );
-
             },
             [appointments]
         );
@@ -428,26 +403,31 @@ function DashboardPage() {
 
     const closeMobileMenu =
         () => {
-
             setMobileMenuOpen(
                 false
             );
         };
 
 
+    const goTo = (
+        path
+    ) => {
+        closeMobileMenu();
+
+        navigate(path);
+    };
+
+
     const handleLogout =
         async () => {
-
             const refreshToken =
                 getRefreshToken();
 
 
             try {
-
                 if (
                     refreshToken
                 ) {
-
                     await apiRequest(
                         "/auth/logout/",
                         {
@@ -461,30 +441,25 @@ function DashboardPage() {
                         }
                     );
                 }
-
             }
 
             catch (
                 logoutError
             ) {
-
                 console.error(
                     "Logout request failed:",
                     logoutError
                 );
-
             }
 
             finally {
-
                 clearAuthSession();
 
 
                 navigate(
                     "/",
                     {
-                        replace:
-                            true,
+                        replace: true,
                     }
                 );
             }
@@ -492,7 +467,6 @@ function DashboardPage() {
 
 
     return (
-
         <div className="dashboard-page">
 
 
@@ -528,7 +502,6 @@ function DashboardPage() {
 
 
                     <div>
-
                         <strong>
                             MediTrack
                         </strong>
@@ -536,7 +509,6 @@ function DashboardPage() {
                         <span>
                             Healthcare System
                         </span>
-
                     </div>
 
                 </div>
@@ -547,11 +519,12 @@ function DashboardPage() {
                     <button
                         type="button"
                         className="nav-item active"
-                        onClick={
-                            closeMobileMenu
+                        onClick={() =>
+                            goTo(
+                                "/dashboard"
+                            )
                         }
                     >
-
                         <span className="nav-icon">
                             D
                         </span>
@@ -559,23 +532,18 @@ function DashboardPage() {
                         <span>
                             Dashboard
                         </span>
-
                     </button>
 
 
                     <button
                         type="button"
                         className="nav-item"
-                        onClick={() => {
-
-                            closeMobileMenu();
-
-                            navigate(
+                        onClick={() =>
+                            goTo(
                                 "/patients"
-                            );
-                        }}
+                            )
+                        }
                     >
-
                         <span className="nav-icon">
                             P
                         </span>
@@ -583,15 +551,18 @@ function DashboardPage() {
                         <span>
                             Patients
                         </span>
-
                     </button>
 
 
                     <button
                         type="button"
                         className="nav-item"
+                        onClick={() =>
+                            goTo(
+                                "/doctors"
+                            )
+                        }
                     >
-
                         <span className="nav-icon">
                             Dr
                         </span>
@@ -599,19 +570,18 @@ function DashboardPage() {
                         <span>
                             Doctors
                         </span>
-
-                        <span className="nav-tag">
-                            Soon
-                        </span>
-
                     </button>
 
 
                     <button
                         type="button"
                         className="nav-item"
+                        onClick={() =>
+                            goTo(
+                                "/appointments"
+                            )
+                        }
                     >
-
                         <span className="nav-icon">
                             A
                         </span>
@@ -619,11 +589,6 @@ function DashboardPage() {
                         <span>
                             Appointments
                         </span>
-
-                        <span className="nav-tag">
-                            Soon
-                        </span>
-
                     </button>
 
                 </nav>
@@ -634,14 +599,12 @@ function DashboardPage() {
                     <div className="sidebar-user">
 
                         <div className="user-avatar">
-
                             {
                                 user?.full_name
                                     ?.charAt(0)
                                     ?.toUpperCase() ||
                                 "U"
                             }
-
                         </div>
 
 
@@ -702,7 +665,6 @@ function DashboardPage() {
 
 
                         <div>
-
                             <span className="page-label">
                                 Overview
                             </span>
@@ -710,7 +672,6 @@ function DashboardPage() {
                             <h1>
                                 Dashboard
                             </h1>
-
                         </div>
 
                     </div>
@@ -719,14 +680,12 @@ function DashboardPage() {
                     <div className="header-profile">
 
                         <div className="header-avatar">
-
                             {
                                 user?.full_name
                                     ?.charAt(0)
                                     ?.toUpperCase() ||
                                 "U"
                             }
-
                         </div>
 
 
@@ -790,11 +749,9 @@ function DashboardPage() {
 
 
                 {error && (
-
                     <div className="dashboard-error">
                         {error}
                     </div>
-
                 )}
 
 
@@ -808,7 +765,6 @@ function DashboardPage() {
 
 
                         <div>
-
                             <span>
                                 Total Patients
                             </span>
@@ -820,7 +776,6 @@ function DashboardPage() {
                                         : patients.length
                                 }
                             </strong>
-
                         </div>
 
                     </article>
@@ -834,7 +789,6 @@ function DashboardPage() {
 
 
                         <div>
-
                             <span>
                                 Available Doctors
                             </span>
@@ -846,7 +800,6 @@ function DashboardPage() {
                                         : availableDoctors
                                 }
                             </strong>
-
                         </div>
 
                     </article>
@@ -860,7 +813,6 @@ function DashboardPage() {
 
 
                         <div>
-
                             <span>
                                 Scheduled
                             </span>
@@ -872,7 +824,6 @@ function DashboardPage() {
                                         : scheduledAppointments.length
                                 }
                             </strong>
-
                         </div>
 
                     </article>
@@ -886,7 +837,6 @@ function DashboardPage() {
 
 
                         <div>
-
                             <span>
                                 Completed
                             </span>
@@ -898,7 +848,6 @@ function DashboardPage() {
                                         : completedAppointments.length
                                 }
                             </strong>
-
                         </div>
 
                     </article>
@@ -913,7 +862,6 @@ function DashboardPage() {
                         <div className="panel-header">
 
                             <div>
-
                                 <span>
                                     Schedule
                                 </span>
@@ -921,7 +869,6 @@ function DashboardPage() {
                                 <h2>
                                     Upcoming Appointments
                                 </h2>
-
                             </div>
 
                         </div>
@@ -930,7 +877,6 @@ function DashboardPage() {
                         {
                             loading
                                 ? (
-
                                     <div className="empty-state">
 
                                         <strong>
@@ -938,13 +884,11 @@ function DashboardPage() {
                                         </strong>
 
                                     </div>
-
                                 )
                                 :
                                 upcomingAppointments.length ===
                                 0
                                     ? (
-
                                         <div className="empty-state">
 
                                             <div className="empty-icon">
@@ -964,10 +908,8 @@ function DashboardPage() {
                                             </p>
 
                                         </div>
-
                                     )
                                     : (
-
                                         <div className="appointment-list">
 
                                             {
@@ -983,7 +925,6 @@ function DashboardPage() {
 
 
                                                         return (
-
                                                             <div
                                                                 className="appointment-item"
                                                                 key={
@@ -1040,14 +981,12 @@ function DashboardPage() {
                                                                 </span>
 
                                                             </div>
-
                                                         );
                                                     }
                                                 )
                                             }
 
                                         </div>
-
                                     )
                         }
 
@@ -1059,7 +998,6 @@ function DashboardPage() {
                         <div className="panel-header">
 
                             <div>
-
                                 <span>
                                     System
                                 </span>
@@ -1067,7 +1005,6 @@ function DashboardPage() {
                                 <h2>
                                     Quick Summary
                                 </h2>
-
                             </div>
 
                         </div>

@@ -14,24 +14,18 @@ import {
     getRefreshToken,
 } from "../api/client";
 
-import {
-    isValidBDPhone,
-    isValidEmail,
-} from "../utils/validators";
-
 import "./DashboardPage.css";
-import "./PatientsPage.css";
+import "./AppointmentsPage.css";
 
 
 const EMPTY_FORM = {
-    full_name: "",
-    date_of_birth: "",
-    gender: "",
-    phone_number: "",
-    email: "",
-    address: "",
-    blood_group: "",
-    medical_notes: "",
+    patient: "",
+    doctor: "",
+    appointment_date: "",
+    appointment_time: "",
+    status: "scheduled",
+    reason: "",
+    consultation_notes: "",
 };
 
 
@@ -57,12 +51,8 @@ const getStoredUser = () => {
 };
 
 
-const normalizeList = (
-    data
-) => {
-    if (
-        Array.isArray(data)
-    ) {
+const normalizeList = (data) => {
+    if (Array.isArray(data)) {
         return data;
     }
 
@@ -101,21 +91,83 @@ const formatDate = (
 };
 
 
-const formatGender = (
-    gender
+const formatTime = (
+    timeString
 ) => {
-    if (!gender) {
+    if (!timeString) {
         return "Not provided";
     }
 
-    return (
-        gender.charAt(0).toUpperCase() +
-        gender.slice(1)
+    const [
+        hour,
+        minute,
+    ] = timeString.split(":");
+
+    const date =
+        new Date();
+
+    date.setHours(
+        Number(hour),
+        Number(minute),
+        0,
+        0
+    );
+
+    return date.toLocaleTimeString(
+        [],
+        {
+            hour: "numeric",
+            minute: "2-digit",
+        }
     );
 };
 
 
-function PatientsPage() {
+const getTodayString = () => {
+    const now =
+        new Date();
+
+    const year =
+        now.getFullYear();
+
+    const month =
+        String(
+            now.getMonth() + 1
+        ).padStart(
+            2,
+            "0"
+        );
+
+    const day =
+        String(
+            now.getDate()
+        ).padStart(
+            2,
+            "0"
+        );
+
+    return `${year}-${month}-${day}`;
+};
+
+
+const getStatusLabel = (
+    status
+) => {
+    const labels = {
+        scheduled: "Scheduled",
+        completed: "Completed",
+        cancelled: "Cancelled",
+        no_show: "No Show",
+    };
+
+    return (
+        labels[status] ||
+        status
+    );
+};
+
+
+function AppointmentsPage() {
     const navigate =
         useNavigate();
 
@@ -133,8 +185,20 @@ function PatientsPage() {
 
 
     const [
+        appointments,
+        setAppointments,
+    ] = useState([]);
+
+
+    const [
         patients,
         setPatients,
+    ] = useState([]);
+
+
+    const [
+        doctors,
+        setDoctors,
     ] = useState([]);
 
 
@@ -163,23 +227,29 @@ function PatientsPage() {
 
 
     const [
+        statusFilter,
+        setStatusFilter,
+    ] = useState("all");
+
+
+    const [
         formOpen,
         setFormOpen,
     ] = useState(false);
 
 
     const [
-        editingPatient,
-        setEditingPatient,
+        editingAppointment,
+        setEditingAppointment,
     ] = useState(null);
 
 
     const [
         formData,
         setFormData,
-    ] = useState(
-        EMPTY_FORM
-    );
+    ] = useState({
+        ...EMPTY_FORM,
+    });
 
 
     const [
@@ -195,14 +265,14 @@ function PatientsPage() {
 
 
     const [
-        selectedPatient,
-        setSelectedPatient,
+        selectedAppointment,
+        setSelectedAppointment,
     ] = useState(null);
 
 
     const [
-        patientToDelete,
-        setPatientToDelete,
+        appointmentToDelete,
+        setAppointmentToDelete,
     ] = useState(null);
 
 
@@ -235,20 +305,47 @@ function PatientsPage() {
     };
 
 
-    const loadPatients =
+    const loadData =
         async () => {
             setLoading(true);
             setError("");
 
             try {
-                const data =
-                    await apiRequest(
-                        "/patients/"
-                    );
+                const [
+                    appointmentData,
+                    patientData,
+                    doctorData,
+                ] =
+                    await Promise.all([
+                        apiRequest(
+                            "/appointments/"
+                        ),
+
+                        apiRequest(
+                            "/patients/"
+                        ),
+
+                        apiRequest(
+                            "/doctors/"
+                        ),
+                    ]);
+
+
+                setAppointments(
+                    normalizeList(
+                        appointmentData
+                    )
+                );
 
                 setPatients(
                     normalizeList(
-                        data
+                        patientData
+                    )
+                );
+
+                setDoctors(
+                    normalizeList(
+                        doctorData
                     )
                 );
             }
@@ -266,7 +363,7 @@ function PatientsPage() {
 
                 setError(
                     requestError.message ||
-                    "Unable to load patients."
+                    "Unable to load appointment data."
                 );
             }
 
@@ -277,11 +374,11 @@ function PatientsPage() {
 
 
     useEffect(() => {
-        loadPatients();
+        loadData();
     }, []);
 
 
-    const filteredPatients =
+    const filteredAppointments =
         useMemo(
             () => {
                 const query =
@@ -290,19 +387,37 @@ function PatientsPage() {
                         .toLowerCase();
 
 
-                if (!query) {
-                    return patients;
-                }
+                return appointments.filter(
+                    (
+                        appointment
+                    ) => {
+                        const matchesStatus =
+                            statusFilter ===
+                            "all" ||
+                            appointment.status ===
+                            statusFilter;
 
 
-                return patients.filter(
-                    (patient) => {
+                        if (
+                            !matchesStatus
+                        ) {
+                            return false;
+                        }
+
+
+                        if (!query) {
+                            return true;
+                        }
+
+
                         const values = [
-                            patient.full_name,
-                            patient.phone_number,
-                            patient.email,
-                            patient.blood_group,
-                            patient.gender,
+                            appointment.patient_name,
+                            appointment.doctor_name,
+                            appointment.doctor_specialization,
+                            appointment.appointment_date,
+                            appointment.appointment_time,
+                            appointment.status,
+                            appointment.reason,
                         ];
 
 
@@ -320,9 +435,24 @@ function PatientsPage() {
                 );
             },
             [
-                patients,
+                appointments,
                 searchTerm,
+                statusFilter,
             ]
+        );
+
+
+    const scheduledCount =
+        useMemo(
+            () =>
+                appointments.filter(
+                    (
+                        appointment
+                    ) =>
+                        appointment.status ===
+                        "scheduled"
+                ).length,
+            [appointments]
         );
 
 
@@ -345,7 +475,7 @@ function PatientsPage() {
 
     const openCreateForm =
         () => {
-            setEditingPatient(
+            setEditingAppointment(
                 null
             );
 
@@ -360,39 +490,49 @@ function PatientsPage() {
 
 
     const openEditForm = (
-        patient
+        appointment
     ) => {
-        setEditingPatient(
-            patient
+        setEditingAppointment(
+            appointment
         );
 
-
         setFormData({
-            full_name:
-                patient.full_name || "",
+            patient:
+                String(
+                    appointment.patient ||
+                    ""
+                ),
 
-            date_of_birth:
-                patient.date_of_birth || "",
+            doctor:
+                String(
+                    appointment.doctor ||
+                    ""
+                ),
 
-            gender:
-                patient.gender || "",
+            appointment_date:
+                appointment.appointment_date ||
+                "",
 
-            phone_number:
-                patient.phone_number || "",
+            appointment_time:
+                appointment.appointment_time
+                    ?.slice(
+                        0,
+                        5
+                    ) ||
+                "",
 
-            email:
-                patient.email || "",
+            status:
+                appointment.status ||
+                "scheduled",
 
-            address:
-                patient.address || "",
+            reason:
+                appointment.reason ||
+                "",
 
-            blood_group:
-                patient.blood_group || "",
-
-            medical_notes:
-                patient.medical_notes || "",
+            consultation_notes:
+                appointment.consultation_notes ||
+                "",
         });
-
 
         setFormError("");
 
@@ -408,7 +548,7 @@ function PatientsPage() {
 
             setFormOpen(false);
 
-            setEditingPatient(
+            setEditingAppointment(
                 null
             );
 
@@ -428,7 +568,6 @@ function PatientsPage() {
             value,
         } = event.target;
 
-
         setFormData(
             (current) => ({
                 ...current,
@@ -440,83 +579,55 @@ function PatientsPage() {
 
     const validateForm =
         () => {
-            if (
-                !formData.full_name.trim()
-            ) {
+            if (!formData.patient) {
                 return (
-                    "Patient full name is required."
+                    "Please select a patient."
+                );
+            }
+
+
+            if (!formData.doctor) {
+                return (
+                    "Please select a doctor."
                 );
             }
 
 
             if (
-                !formData.gender
+                !formData.appointment_date
             ) {
                 return (
-                    "Please select the patient's gender."
+                    "Appointment date is required."
                 );
             }
 
 
             if (
-                !formData.phone_number.trim()
+                !formData.appointment_time
             ) {
                 return (
-                    "Phone number is required."
+                    "Appointment time is required."
                 );
             }
 
 
             if (
-                !isValidBDPhone(
-                    formData.phone_number
-                )
+                !editingAppointment &&
+                formData.appointment_date <
+                getTodayString()
             ) {
                 return (
-                    "Enter a valid Bangladesh phone number."
+                    "Appointment date cannot be in the past."
                 );
             }
 
 
             if (
-                formData.email.trim() &&
-                !isValidEmail(
-                    formData.email
-                )
+                !formData.reason.trim()
             ) {
                 return (
-                    "Enter a valid email address."
+                    "Please enter the reason for the appointment."
                 );
-            }
-
-
-            if (
-                formData.date_of_birth
-            ) {
-                const birthDate =
-                    new Date(
-                        `${formData.date_of_birth}T00:00:00`
-                    );
-
-                const today =
-                    new Date();
-
-                today.setHours(
-                    23,
-                    59,
-                    59,
-                    999
-                );
-
-
-                if (
-                    birthDate >
-                    today
-                ) {
-                    return (
-                        "Date of birth cannot be in the future."
-                    );
-                }
             }
 
 
@@ -531,7 +642,6 @@ function PatientsPage() {
             event.preventDefault();
 
             setFormError("");
-
             setSuccessMessage("");
 
 
@@ -554,39 +664,41 @@ function PatientsPage() {
 
 
             const payload = {
-                full_name:
-                    formData.full_name.trim(),
+                patient:
+                    Number(
+                        formData.patient
+                    ),
 
-                date_of_birth:
-                    formData.date_of_birth ||
-                    null,
+                doctor:
+                    Number(
+                        formData.doctor
+                    ),
 
-                gender:
-                    formData.gender,
+                appointment_date:
+                    formData.appointment_date,
 
-                phone_number:
-                    formData.phone_number.trim(),
+                appointment_time:
+                    formData.appointment_time,
 
-                email:
-                    formData.email.trim(),
+                status:
+                    formData.status,
 
-                address:
-                    formData.address.trim(),
+                reason:
+                    formData.reason.trim(),
 
-                blood_group:
-                    formData.blood_group,
-
-                medical_notes:
-                    formData.medical_notes.trim(),
+                consultation_notes:
+                    formData
+                        .consultation_notes
+                        .trim(),
             };
 
 
             try {
                 if (
-                    editingPatient
+                    editingAppointment
                 ) {
                     await apiRequest(
-                        `/patients/${editingPatient.id}/`,
+                        `/appointments/${editingAppointment.id}/`,
                         {
                             method:
                                 "PATCH",
@@ -598,13 +710,13 @@ function PatientsPage() {
 
 
                     setSuccessMessage(
-                        "Patient updated successfully."
+                        "Appointment updated successfully."
                     );
                 }
 
                 else {
                     await apiRequest(
-                        "/patients/",
+                        "/appointments/",
                         {
                             method:
                                 "POST",
@@ -616,14 +728,14 @@ function PatientsPage() {
 
 
                     setSuccessMessage(
-                        "Patient added successfully."
+                        "Appointment created successfully."
                     );
                 }
 
 
                 setFormOpen(false);
 
-                setEditingPatient(
+                setEditingAppointment(
                     null
                 );
 
@@ -632,7 +744,7 @@ function PatientsPage() {
                 });
 
 
-                await loadPatients();
+                await loadData();
             }
 
             catch (
@@ -649,7 +761,7 @@ function PatientsPage() {
 
                 setFormError(
                     requestError.message ||
-                    "Unable to save patient."
+                    "Unable to save appointment."
                 );
             }
 
@@ -662,7 +774,7 @@ function PatientsPage() {
     const handleDelete =
         async () => {
             if (
-                !patientToDelete
+                !appointmentToDelete
             ) {
                 return;
             }
@@ -671,13 +783,12 @@ function PatientsPage() {
             setDeleting(true);
 
             setError("");
-
             setSuccessMessage("");
 
 
             try {
                 await apiRequest(
-                    `/patients/${patientToDelete.id}/`,
+                    `/appointments/${appointmentToDelete.id}/`,
                     {
                         method:
                             "DELETE",
@@ -685,22 +796,24 @@ function PatientsPage() {
                 );
 
 
-                setPatients(
+                setAppointments(
                     (current) =>
                         current.filter(
-                            (patient) =>
-                                patient.id !==
-                                patientToDelete.id
+                            (
+                                appointment
+                            ) =>
+                                appointment.id !==
+                                appointmentToDelete.id
                         )
                 );
 
 
                 setSuccessMessage(
-                    "Patient deleted successfully."
+                    "Appointment deleted successfully."
                 );
 
 
-                setPatientToDelete(
+                setAppointmentToDelete(
                     null
                 );
             }
@@ -719,7 +832,7 @@ function PatientsPage() {
 
                 setError(
                     requestError.message ||
-                    "Unable to delete patient."
+                    "Unable to delete appointment."
                 );
             }
 
@@ -766,7 +879,6 @@ function PatientsPage() {
             finally {
                 clearAuthSession();
 
-
                 navigate(
                     "/",
                     {
@@ -778,8 +890,7 @@ function PatientsPage() {
 
 
     return (
-        <div className="dashboard-page patients-page">
-
+        <div className="dashboard-page appointments-page">
 
             <div
                 className={
@@ -848,7 +959,7 @@ function PatientsPage() {
 
                     <button
                         type="button"
-                        className="nav-item active"
+                        className="nav-item"
                         onClick={() =>
                             goTo(
                                 "/patients"
@@ -886,11 +997,9 @@ function PatientsPage() {
 
                     <button
                         type="button"
-                        className="nav-item"
-                        onClick={() =>
-                            goTo(
-                                "/appointments"
-                            )
+                        className="nav-item active"
+                        onClick={
+                            closeMobileMenu
                         }
                     >
                         <span className="nav-icon">
@@ -977,11 +1086,11 @@ function PatientsPage() {
 
                         <div>
                             <span className="page-label">
-                                Management
+                                Scheduling
                             </span>
 
                             <h1>
-                                Patients
+                                Appointments
                             </h1>
                         </div>
 
@@ -1025,40 +1134,62 @@ function PatientsPage() {
                 </header>
 
 
-                <section className="patients-hero">
+                <section className="appointments-hero">
 
                     <div>
 
-                        <span className="patients-hero-label">
-                            Patient Records
+                        <span className="appointments-hero-label">
+                            Appointment Records
                         </span>
 
                         <h2>
-                            Manage your patients
+                            Manage appointments
                         </h2>
 
                         <p>
-                            Add, view, update and
-                            securely manage patient
+                            Schedule consultations,
+                            update appointment status
+                            and manage consultation
                             information.
                         </p>
 
                     </div>
 
 
-                    <button
-                        type="button"
-                        className="add-patient-button"
-                        onClick={
-                            openCreateForm
-                        }
-                    >
-                        <span>
-                            +
-                        </span>
+                    <div className="appointments-hero-actions">
 
-                        Add Patient
-                    </button>
+                        <div className="scheduled-summary">
+
+                            <strong>
+                                {
+                                    loading
+                                        ? "..."
+                                        : scheduledCount
+                                }
+                            </strong>
+
+                            <span>
+                                Scheduled
+                            </span>
+
+                        </div>
+
+
+                        <button
+                            type="button"
+                            className="add-appointment-button"
+                            onClick={
+                                openCreateForm
+                            }
+                        >
+                            <span>
+                                +
+                            </span>
+
+                            New Appointment
+                        </button>
+
+                    </div>
 
                 </section>
 
@@ -1071,17 +1202,17 @@ function PatientsPage() {
 
 
                 {successMessage && (
-                    <div className="patients-success">
+                    <div className="appointments-success">
                         {successMessage}
                     </div>
                 )}
 
 
-                <section className="patients-content">
+                <section className="appointments-content">
 
-                    <div className="patients-toolbar">
+                    <div className="appointments-toolbar">
 
-                        <div className="patients-search">
+                        <div className="appointments-search">
 
                             <span>
                                 🔍
@@ -1102,26 +1233,64 @@ function PatientsPage() {
                                                 .value
                                         )
                                 }
-                                placeholder="Search by name, phone, email, blood group..."
+                                placeholder="Search patient, doctor, date or reason..."
                             />
 
                         </div>
 
 
-                        <div className="patient-count">
+                        <select
+                            className="appointment-status-filter"
+                            value={
+                                statusFilter
+                            }
+                            onChange={
+                                (
+                                    event
+                                ) =>
+                                    setStatusFilter(
+                                        event
+                                            .target
+                                            .value
+                                    )
+                            }
+                        >
+                            <option value="all">
+                                All Statuses
+                            </option>
+
+                            <option value="scheduled">
+                                Scheduled
+                            </option>
+
+                            <option value="completed">
+                                Completed
+                            </option>
+
+                            <option value="cancelled">
+                                Cancelled
+                            </option>
+
+                            <option value="no_show">
+                                No Show
+                            </option>
+                        </select>
+
+
+                        <div className="appointment-count">
 
                             <strong>
                                 {
-                                    filteredPatients.length
+                                    filteredAppointments.length
                                 }
                             </strong>
 
                             <span>
                                 {
-                                    filteredPatients.length ===
+                                    filteredAppointments.length ===
                                     1
-                                        ? "Patient"
-                                        : "Patients"
+                                        ? "Appointment"
+                                        : "Appointments"
                                 }
                             </span>
 
@@ -1133,47 +1302,50 @@ function PatientsPage() {
                     {
                         loading
                             ? (
-                                <div className="patients-loading">
+                                <div className="appointments-loading">
 
-                                    <div className="loading-spinner" />
+                                    <div className="appointment-loading-spinner" />
 
                                     <span>
-                                        Loading patients...
+                                        Loading appointments...
                                     </span>
 
                                 </div>
                             )
                             :
-                            filteredPatients.length ===
+                            filteredAppointments.length ===
                             0
                                 ? (
-                                    <div className="patients-empty">
+                                    <div className="appointments-empty">
 
-                                        <div className="patients-empty-icon">
-                                            P
+                                        <div className="appointments-empty-icon">
+                                            A
                                         </div>
-
 
                                         <h3>
                                             {
-                                                searchTerm
-                                                    ? "No matching patients"
-                                                    : "No patients yet"
+                                                searchTerm ||
+                                                statusFilter !==
+                                                "all"
+                                                    ? "No matching appointments"
+                                                    : "No appointments yet"
                                             }
                                         </h3>
 
-
                                         <p>
                                             {
-                                                searchTerm
-                                                    ? "Try another search term."
-                                                    : "Add your first patient to start managing patient records."
+                                                searchTerm ||
+                                                statusFilter !==
+                                                "all"
+                                                    ? "Try changing your search or status filter."
+                                                    : "Create your first appointment to begin scheduling consultations."
                                             }
                                         </p>
 
-
                                         {
                                             !searchTerm &&
+                                            statusFilter ===
+                                            "all" &&
                                             (
                                                 <button
                                                     type="button"
@@ -1181,7 +1353,7 @@ function PatientsPage() {
                                                         openCreateForm
                                                     }
                                                 >
-                                                    Add Patient
+                                                    New Appointment
                                                 </button>
                                             )
                                         }
@@ -1191,67 +1363,62 @@ function PatientsPage() {
                                 : (
                                     <>
 
-                                        <div className="patients-table-wrapper">
+                                        <div className="appointments-table-wrapper">
 
-                                            <table className="patients-table">
+                                            <table className="appointments-table">
 
                                                 <thead>
-
                                                     <tr>
-
                                                         <th>
                                                             Patient
                                                         </th>
 
                                                         <th>
-                                                            Contact
+                                                            Doctor
                                                         </th>
 
                                                         <th>
-                                                            Gender
+                                                            Date
                                                         </th>
 
                                                         <th>
-                                                            Blood Group
+                                                            Time
                                                         </th>
 
                                                         <th>
-                                                            Date of Birth
+                                                            Status
+                                                        </th>
+
+                                                        <th>
+                                                            Reason
                                                         </th>
 
                                                         <th>
                                                             Actions
                                                         </th>
-
                                                     </tr>
-
                                                 </thead>
 
 
                                                 <tbody>
 
                                                     {
-                                                        filteredPatients.map(
+                                                        filteredAppointments.map(
                                                             (
-                                                                patient
+                                                                appointment
                                                             ) => (
                                                                 <tr
                                                                     key={
-                                                                        patient.id
+                                                                        appointment.id
                                                                     }
                                                                 >
 
                                                                     <td>
 
-                                                                        <div className="patient-name-cell">
+                                                                        <div className="appointment-person">
 
-                                                                            <div className="patient-table-avatar">
-                                                                                {
-                                                                                    patient.full_name
-                                                                                        ?.charAt(0)
-                                                                                        ?.toUpperCase() ||
-                                                                                    "P"
-                                                                                }
+                                                                            <div className="appointment-person-avatar">
+                                                                                P
                                                                             </div>
 
 
@@ -1259,12 +1426,12 @@ function PatientsPage() {
 
                                                                                 <strong>
                                                                                     {
-                                                                                        patient.full_name
+                                                                                        appointment.patient_name
                                                                                     }
                                                                                 </strong>
 
                                                                                 <span>
-                                                                                    ID #{patient.id}
+                                                                                    Patient #{appointment.patient}
                                                                                 </span>
 
                                                                             </div>
@@ -1276,18 +1443,18 @@ function PatientsPage() {
 
                                                                     <td>
 
-                                                                        <div className="patient-contact">
+                                                                        <div className="appointment-doctor">
 
                                                                             <strong>
                                                                                 {
-                                                                                    patient.phone_number
+                                                                                    appointment.doctor_name
                                                                                 }
                                                                             </strong>
 
                                                                             <span>
                                                                                 {
-                                                                                    patient.email ||
-                                                                                    "No email"
+                                                                                    appointment.doctor_specialization ||
+                                                                                    "General"
                                                                                 }
                                                                             </span>
 
@@ -1298,38 +1465,17 @@ function PatientsPage() {
 
                                                                     <td>
                                                                         {
-                                                                            formatGender(
-                                                                                patient.gender
-                                                                            )
-                                                                        }
-                                                                    </td>
-
-
-                                                                    <td>
-
-                                                                        {
-                                                                            patient.blood_group
-                                                                                ? (
-                                                                                    <span className="blood-badge">
-                                                                                        {
-                                                                                            patient.blood_group
-                                                                                        }
-                                                                                    </span>
-                                                                                )
-                                                                                : (
-                                                                                    <span className="not-provided">
-                                                                                        Not provided
-                                                                                    </span>
-                                                                                )
-                                                                        }
-
-                                                                    </td>
-
-
-                                                                    <td>
-                                                                        {
                                                                             formatDate(
-                                                                                patient.date_of_birth
+                                                                                appointment.appointment_date
+                                                                            )
+                                                                        }
+                                                                    </td>
+
+
+                                                                    <td>
+                                                                        {
+                                                                            formatTime(
+                                                                                appointment.appointment_time
                                                                             )
                                                                         }
                                                                     </td>
@@ -1337,14 +1483,43 @@ function PatientsPage() {
 
                                                                     <td>
 
-                                                                        <div className="patient-actions">
+                                                                        <span
+                                                                            className={
+                                                                                `appointment-status-badge status-${appointment.status}`
+                                                                            }
+                                                                        >
+                                                                            {
+                                                                                getStatusLabel(
+                                                                                    appointment.status
+                                                                                )
+                                                                            }
+                                                                        </span>
+
+                                                                    </td>
+
+
+                                                                    <td>
+
+                                                                        <span className="appointment-reason">
+                                                                            {
+                                                                                appointment.reason ||
+                                                                                "Not provided"
+                                                                            }
+                                                                        </span>
+
+                                                                    </td>
+
+
+                                                                    <td>
+
+                                                                        <div className="appointment-actions">
 
                                                                             <button
                                                                                 type="button"
-                                                                                className="view-action"
+                                                                                className="appointment-view-action"
                                                                                 onClick={() =>
-                                                                                    setSelectedPatient(
-                                                                                        patient
+                                                                                    setSelectedAppointment(
+                                                                                        appointment
                                                                                     )
                                                                                 }
                                                                             >
@@ -1354,10 +1529,10 @@ function PatientsPage() {
 
                                                                             <button
                                                                                 type="button"
-                                                                                className="edit-action"
+                                                                                className="appointment-edit-action"
                                                                                 onClick={() =>
                                                                                     openEditForm(
-                                                                                        patient
+                                                                                        appointment
                                                                                     )
                                                                                 }
                                                                             >
@@ -1367,10 +1542,10 @@ function PatientsPage() {
 
                                                                             <button
                                                                                 type="button"
-                                                                                className="delete-action"
+                                                                                className="appointment-delete-action"
                                                                                 onClick={() =>
-                                                                                    setPatientToDelete(
-                                                                                        patient
+                                                                                    setAppointmentToDelete(
+                                                                                        appointment
                                                                                     )
                                                                                 }
                                                                             >
@@ -1393,109 +1568,66 @@ function PatientsPage() {
                                         </div>
 
 
-                                        <div className="patients-mobile-list">
+                                        <div className="appointments-mobile-list">
 
                                             {
-                                                filteredPatients.map(
+                                                filteredAppointments.map(
                                                     (
-                                                        patient
+                                                        appointment
                                                     ) => (
                                                         <article
-                                                            className="patient-mobile-card"
+                                                            className="appointment-mobile-card"
                                                             key={
-                                                                patient.id
+                                                                appointment.id
                                                             }
                                                         >
 
-                                                            <div className="mobile-patient-header">
+                                                            <div className="appointment-mobile-header">
 
-                                                                <div className="patient-name-cell">
+                                                                <div>
 
-                                                                    <div className="patient-table-avatar">
+                                                                    <strong>
                                                                         {
-                                                                            patient.full_name
-                                                                                ?.charAt(0)
-                                                                                ?.toUpperCase() ||
-                                                                            "P"
+                                                                            appointment.patient_name
                                                                         }
-                                                                    </div>
+                                                                    </strong>
 
-
-                                                                    <div>
-
-                                                                        <strong>
-                                                                            {
-                                                                                patient.full_name
-                                                                            }
-                                                                        </strong>
-
-                                                                        <span>
-                                                                            ID #{patient.id}
-                                                                        </span>
-
-                                                                    </div>
+                                                                    <span>
+                                                                        {
+                                                                            appointment.doctor_name
+                                                                        }
+                                                                    </span>
 
                                                                 </div>
 
 
-                                                                {
-                                                                    patient.blood_group &&
-                                                                    (
-                                                                        <span className="blood-badge">
-                                                                            {
-                                                                                patient.blood_group
-                                                                            }
-                                                                        </span>
-                                                                    )
-                                                                }
+                                                                <span
+                                                                    className={
+                                                                        `appointment-status-badge status-${appointment.status}`
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        getStatusLabel(
+                                                                            appointment.status
+                                                                        )
+                                                                    }
+                                                                </span>
 
                                                             </div>
 
 
-                                                            <div className="mobile-patient-details">
+                                                            <div className="appointment-mobile-details">
 
                                                                 <div>
 
                                                                     <span>
-                                                                        Phone
-                                                                    </span>
-
-                                                                    <strong>
-                                                                        {
-                                                                            patient.phone_number
-                                                                        }
-                                                                    </strong>
-
-                                                                </div>
-
-
-                                                                <div>
-
-                                                                    <span>
-                                                                        Gender
-                                                                    </span>
-
-                                                                    <strong>
-                                                                        {
-                                                                            formatGender(
-                                                                                patient.gender
-                                                                            )
-                                                                        }
-                                                                    </strong>
-
-                                                                </div>
-
-
-                                                                <div>
-
-                                                                    <span>
-                                                                        Date of Birth
+                                                                        Date
                                                                     </span>
 
                                                                     <strong>
                                                                         {
                                                                             formatDate(
-                                                                                patient.date_of_birth
+                                                                                appointment.appointment_date
                                                                             )
                                                                         }
                                                                     </strong>
@@ -1506,12 +1638,45 @@ function PatientsPage() {
                                                                 <div>
 
                                                                     <span>
-                                                                        Email
+                                                                        Time
                                                                     </span>
 
                                                                     <strong>
                                                                         {
-                                                                            patient.email ||
+                                                                            formatTime(
+                                                                                appointment.appointment_time
+                                                                            )
+                                                                        }
+                                                                    </strong>
+
+                                                                </div>
+
+
+                                                                <div>
+
+                                                                    <span>
+                                                                        Specialization
+                                                                    </span>
+
+                                                                    <strong>
+                                                                        {
+                                                                            appointment.doctor_specialization ||
+                                                                            "General"
+                                                                        }
+                                                                    </strong>
+
+                                                                </div>
+
+
+                                                                <div>
+
+                                                                    <span>
+                                                                        Reason
+                                                                    </span>
+
+                                                                    <strong>
+                                                                        {
+                                                                            appointment.reason ||
                                                                             "Not provided"
                                                                         }
                                                                     </strong>
@@ -1521,14 +1686,14 @@ function PatientsPage() {
                                                             </div>
 
 
-                                                            <div className="mobile-patient-actions">
+                                                            <div className="appointment-mobile-actions">
 
                                                                 <button
                                                                     type="button"
-                                                                    className="view-action"
+                                                                    className="appointment-view-action"
                                                                     onClick={() =>
-                                                                        setSelectedPatient(
-                                                                            patient
+                                                                        setSelectedAppointment(
+                                                                            appointment
                                                                         )
                                                                     }
                                                                 >
@@ -1538,10 +1703,10 @@ function PatientsPage() {
 
                                                                 <button
                                                                     type="button"
-                                                                    className="edit-action"
+                                                                    className="appointment-edit-action"
                                                                     onClick={() =>
                                                                         openEditForm(
-                                                                            patient
+                                                                            appointment
                                                                         )
                                                                     }
                                                                 >
@@ -1551,10 +1716,10 @@ function PatientsPage() {
 
                                                                 <button
                                                                     type="button"
-                                                                    className="delete-action"
+                                                                    className="appointment-delete-action"
                                                                     onClick={() =>
-                                                                        setPatientToDelete(
-                                                                            patient
+                                                                        setAppointmentToDelete(
+                                                                            appointment
                                                                         )
                                                                     }
                                                                 >
@@ -1580,15 +1745,16 @@ function PatientsPage() {
 
 
             {formOpen && (
+
                 <div
-                    className="patient-modal-backdrop"
+                    className="appointment-modal-backdrop"
                     onMouseDown={
                         closeForm
                     }
                 >
 
                     <div
-                        className="patient-modal patient-form-modal"
+                        className="appointment-modal appointment-form-modal"
                         onMouseDown={
                             (
                                 event
@@ -1597,23 +1763,23 @@ function PatientsPage() {
                         }
                     >
 
-                        <div className="patient-modal-header">
+                        <div className="appointment-modal-header">
 
                             <div>
 
                                 <span>
                                     {
-                                        editingPatient
-                                            ? "Update Record"
-                                            : "New Record"
+                                        editingAppointment
+                                            ? "Update Schedule"
+                                            : "New Schedule"
                                     }
                                 </span>
 
                                 <h2>
                                     {
-                                        editingPatient
-                                            ? "Edit Patient"
-                                            : "Add Patient"
+                                        editingAppointment
+                                            ? "Edit Appointment"
+                                            : "Create Appointment"
                                     }
                                 </h2>
 
@@ -1622,7 +1788,7 @@ function PatientsPage() {
 
                             <button
                                 type="button"
-                                className="modal-close-button"
+                                className="appointment-modal-close"
                                 onClick={
                                     closeForm
                                 }
@@ -1635,49 +1801,148 @@ function PatientsPage() {
 
 
                         <form
-                            className="patient-form"
+                            className="appointment-form"
                             onSubmit={
                                 handleSubmit
                             }
                         >
 
-                            <div className="patient-form-grid">
+                            <div className="appointment-form-grid">
 
-                                <div className="form-group form-group-full">
+                                <div className="appointment-form-group">
 
                                     <label>
-                                        Full Name
+                                        Patient
                                         <span>
                                             *
                                         </span>
                                     </label>
 
-                                    <input
-                                        type="text"
-                                        name="full_name"
+
+                                    <select
+                                        name="patient"
                                         value={
-                                            formData.full_name
+                                            formData.patient
                                         }
                                         onChange={
                                             handleFormChange
                                         }
-                                        placeholder="Enter patient full name"
-                                    />
+                                    >
+                                        <option value="">
+                                            Select patient
+                                        </option>
+
+                                        {
+                                            patients.map(
+                                                (
+                                                    patient
+                                                ) => (
+                                                    <option
+                                                        key={
+                                                            patient.id
+                                                        }
+                                                        value={
+                                                            patient.id
+                                                        }
+                                                    >
+                                                        {
+                                                            patient.full_name
+                                                        }
+                                                    </option>
+                                                )
+                                            )
+                                        }
+                                    </select>
 
                                 </div>
 
 
-                                <div className="form-group">
+                                <div className="appointment-form-group">
 
                                     <label>
-                                        Date of Birth
+                                        Doctor
+                                        <span>
+                                            *
+                                        </span>
                                     </label>
+
+
+                                    <select
+                                        name="doctor"
+                                        value={
+                                            formData.doctor
+                                        }
+                                        onChange={
+                                            handleFormChange
+                                        }
+                                    >
+                                        <option value="">
+                                            Select doctor
+                                        </option>
+
+                                        {
+                                            doctors.map(
+                                                (
+                                                    doctor
+                                                ) => (
+                                                    <option
+                                                        key={
+                                                            doctor.id
+                                                        }
+                                                        value={
+                                                            doctor.id
+                                                        }
+                                                        disabled={
+                                                            !doctor.is_available &&
+                                                            String(
+                                                                doctor.id
+                                                            ) !==
+                                                            String(
+                                                                formData.doctor
+                                                            )
+                                                        }
+                                                    >
+                                                        {
+                                                            doctor.full_name
+                                                        }
+                                                        {" - "}
+                                                        {
+                                                            doctor.specialization
+                                                        }
+                                                        {
+                                                            !doctor.is_available
+                                                                ? " (Unavailable)"
+                                                                : ""
+                                                        }
+                                                    </option>
+                                                )
+                                            )
+                                        }
+                                    </select>
+
+                                </div>
+
+
+                                <div className="appointment-form-group">
+
+                                    <label>
+                                        Date
+                                        <span>
+                                            *
+                                        </span>
+                                    </label>
+
 
                                     <input
                                         type="date"
-                                        name="date_of_birth"
+                                        name="appointment_date"
                                         value={
-                                            formData.date_of_birth
+                                            formData.appointment_date
+                                        }
+                                        min={
+                                            editingAppointment
+                                                ? undefined
+                                                : getTodayString()
                                         }
                                         onChange={
                                             handleFormChange
@@ -1687,181 +1952,108 @@ function PatientsPage() {
                                 </div>
 
 
-                                <div className="form-group">
+                                <div className="appointment-form-group">
 
                                     <label>
-                                        Gender
+                                        Time
                                         <span>
                                             *
                                         </span>
                                     </label>
 
-                                    <select
-                                        name="gender"
+
+                                    <input
+                                        type="time"
+                                        name="appointment_time"
                                         value={
-                                            formData.gender
+                                            formData.appointment_time
+                                        }
+                                        onChange={
+                                            handleFormChange
+                                        }
+                                    />
+
+                                </div>
+
+
+                                <div className="appointment-form-group appointment-form-full">
+
+                                    <label>
+                                        Status
+                                    </label>
+
+
+                                    <select
+                                        name="status"
+                                        value={
+                                            formData.status
                                         }
                                         onChange={
                                             handleFormChange
                                         }
                                     >
-                                        <option value="">
-                                            Select gender
+                                        <option value="scheduled">
+                                            Scheduled
                                         </option>
 
-                                        <option value="male">
-                                            Male
+                                        <option value="completed">
+                                            Completed
                                         </option>
 
-                                        <option value="female">
-                                            Female
+                                        <option value="cancelled">
+                                            Cancelled
                                         </option>
 
-                                        <option value="other">
-                                            Other
+                                        <option value="no_show">
+                                            No Show
                                         </option>
                                     </select>
 
                                 </div>
 
 
-                                <div className="form-group">
+                                <div className="appointment-form-group appointment-form-full">
 
                                     <label>
-                                        Phone Number
+                                        Reason
                                         <span>
                                             *
                                         </span>
                                     </label>
 
-                                    <input
-                                        type="tel"
-                                        name="phone_number"
-                                        value={
-                                            formData.phone_number
-                                        }
-                                        onChange={
-                                            handleFormChange
-                                        }
-                                        placeholder="01712345678"
-                                    />
-
-                                </div>
-
-
-                                <div className="form-group">
-
-                                    <label>
-                                        Email
-                                    </label>
-
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={
-                                            formData.email
-                                        }
-                                        onChange={
-                                            handleFormChange
-                                        }
-                                        placeholder="patient@example.com"
-                                    />
-
-                                </div>
-
-
-                                <div className="form-group">
-
-                                    <label>
-                                        Blood Group
-                                    </label>
-
-                                    <select
-                                        name="blood_group"
-                                        value={
-                                            formData.blood_group
-                                        }
-                                        onChange={
-                                            handleFormChange
-                                        }
-                                    >
-                                        <option value="">
-                                            Select blood group
-                                        </option>
-
-                                        <option value="A+">
-                                            A+
-                                        </option>
-
-                                        <option value="A-">
-                                            A-
-                                        </option>
-
-                                        <option value="B+">
-                                            B+
-                                        </option>
-
-                                        <option value="B-">
-                                            B-
-                                        </option>
-
-                                        <option value="AB+">
-                                            AB+
-                                        </option>
-
-                                        <option value="AB-">
-                                            AB-
-                                        </option>
-
-                                        <option value="O+">
-                                            O+
-                                        </option>
-
-                                        <option value="O-">
-                                            O-
-                                        </option>
-                                    </select>
-
-                                </div>
-
-
-                                <div className="form-group form-group-full">
-
-                                    <label>
-                                        Address
-                                    </label>
 
                                     <textarea
-                                        name="address"
+                                        name="reason"
                                         value={
-                                            formData.address
+                                            formData.reason
                                         }
                                         onChange={
                                             handleFormChange
                                         }
-                                        placeholder="Enter patient address"
                                         rows="3"
+                                        placeholder="Reason for appointment"
                                     />
 
                                 </div>
 
 
-                                <div className="form-group form-group-full">
+                                <div className="appointment-form-group appointment-form-full">
 
                                     <label>
-                                        Medical Notes
+                                        Consultation Notes
                                     </label>
 
+
                                     <textarea
-                                        name="medical_notes"
+                                        name="consultation_notes"
                                         value={
-                                            formData.medical_notes
+                                            formData.consultation_notes
                                         }
                                         onChange={
                                             handleFormChange
                                         }
-                                        placeholder="Optional medical notes"
                                         rows="4"
+                                        placeholder="Optional consultation notes"
                                     />
 
                                 </div>
@@ -1870,17 +2062,17 @@ function PatientsPage() {
 
 
                             {formError && (
-                                <div className="patient-form-error">
+                                <div className="appointment-form-error">
                                     {formError}
                                 </div>
                             )}
 
 
-                            <div className="patient-form-actions">
+                            <div className="appointment-form-actions">
 
                                 <button
                                     type="button"
-                                    className="patient-cancel-button"
+                                    className="appointment-cancel-button"
                                     onClick={
                                         closeForm
                                     }
@@ -1894,7 +2086,7 @@ function PatientsPage() {
 
                                 <button
                                     type="submit"
-                                    className="patient-save-button"
+                                    className="appointment-save-button"
                                     disabled={
                                         saving
                                     }
@@ -1903,9 +2095,9 @@ function PatientsPage() {
                                         saving
                                             ? "Saving..."
                                             :
-                                            editingPatient
-                                                ? "Update Patient"
-                                                : "Add Patient"
+                                            editingAppointment
+                                                ? "Update Appointment"
+                                                : "Create Appointment"
                                     }
                                 </button>
 
@@ -1916,21 +2108,23 @@ function PatientsPage() {
                     </div>
 
                 </div>
+
             )}
 
 
-            {selectedPatient && (
+            {selectedAppointment && (
+
                 <div
-                    className="patient-modal-backdrop"
+                    className="appointment-modal-backdrop"
                     onMouseDown={() =>
-                        setSelectedPatient(
+                        setSelectedAppointment(
                             null
                         )
                     }
                 >
 
                     <div
-                        className="patient-modal patient-details-modal"
+                        className="appointment-modal appointment-details-modal"
                         onMouseDown={
                             (
                                 event
@@ -1939,16 +2133,16 @@ function PatientsPage() {
                         }
                     >
 
-                        <div className="patient-modal-header">
+                        <div className="appointment-modal-header">
 
                             <div>
 
                                 <span>
-                                    Patient Record
+                                    Appointment Record
                                 </span>
 
                                 <h2>
-                                    Patient Details
+                                    Appointment Details
                                 </h2>
 
                             </div>
@@ -1956,9 +2150,9 @@ function PatientsPage() {
 
                             <button
                                 type="button"
-                                className="modal-close-button"
+                                className="appointment-modal-close"
                                 onClick={() =>
-                                    setSelectedPatient(
+                                    setSelectedAppointment(
                                         null
                                     )
                                 }
@@ -1969,15 +2163,10 @@ function PatientsPage() {
                         </div>
 
 
-                        <div className="details-patient-heading">
+                        <div className="appointment-details-heading">
 
-                            <div className="details-patient-avatar">
-                                {
-                                    selectedPatient.full_name
-                                        ?.charAt(0)
-                                        ?.toUpperCase() ||
-                                    "P"
-                                }
+                            <div className="appointment-details-icon">
+                                A
                             </div>
 
 
@@ -1985,12 +2174,27 @@ function PatientsPage() {
 
                                 <h3>
                                     {
-                                        selectedPatient.full_name
+                                        selectedAppointment.patient_name
                                     }
                                 </h3>
 
-                                <span>
-                                    Patient ID #{selectedPatient.id}
+                                <p>
+                                    with{" "}
+                                    {
+                                        selectedAppointment.doctor_name
+                                    }
+                                </p>
+
+                                <span
+                                    className={
+                                        `appointment-status-badge status-${selectedAppointment.status}`
+                                    }
+                                >
+                                    {
+                                        getStatusLabel(
+                                            selectedAppointment.status
+                                        )
+                                    }
                                 </span>
 
                             </div>
@@ -1998,17 +2202,17 @@ function PatientsPage() {
                         </div>
 
 
-                        <div className="patient-details-grid">
+                        <div className="appointment-details-grid">
 
                             <div>
 
                                 <span>
-                                    Phone Number
+                                    Patient
                                 </span>
 
                                 <strong>
                                     {
-                                        selectedPatient.phone_number
+                                        selectedAppointment.patient_name
                                     }
                                 </strong>
 
@@ -2018,12 +2222,27 @@ function PatientsPage() {
                             <div>
 
                                 <span>
-                                    Email
+                                    Doctor
                                 </span>
 
                                 <strong>
                                     {
-                                        selectedPatient.email ||
+                                        selectedAppointment.doctor_name
+                                    }
+                                </strong>
+
+                            </div>
+
+
+                            <div>
+
+                                <span>
+                                    Specialization
+                                </span>
+
+                                <strong>
+                                    {
+                                        selectedAppointment.doctor_specialization ||
                                         "Not provided"
                                     }
                                 </strong>
@@ -2034,30 +2253,13 @@ function PatientsPage() {
                             <div>
 
                                 <span>
-                                    Gender
-                                </span>
-
-                                <strong>
-                                    {
-                                        formatGender(
-                                            selectedPatient.gender
-                                        )
-                                    }
-                                </strong>
-
-                            </div>
-
-
-                            <div>
-
-                                <span>
-                                    Date of Birth
+                                    Date
                                 </span>
 
                                 <strong>
                                     {
                                         formatDate(
-                                            selectedPatient.date_of_birth
+                                            selectedAppointment.appointment_date
                                         )
                                     }
                                 </strong>
@@ -2068,13 +2270,14 @@ function PatientsPage() {
                             <div>
 
                                 <span>
-                                    Blood Group
+                                    Time
                                 </span>
 
                                 <strong>
                                     {
-                                        selectedPatient.blood_group ||
-                                        "Not provided"
+                                        formatTime(
+                                            selectedAppointment.appointment_time
+                                        )
                                     }
                                 </strong>
 
@@ -2084,45 +2287,46 @@ function PatientsPage() {
                             <div>
 
                                 <span>
-                                    Created By
+                                    Status
                                 </span>
 
                                 <strong>
                                     {
-                                        selectedPatient.created_by ||
-                                        "Current user"
+                                        getStatusLabel(
+                                            selectedAppointment.status
+                                        )
                                     }
                                 </strong>
 
                             </div>
 
 
-                            <div className="detail-full">
+                            <div className="appointment-detail-full">
 
                                 <span>
-                                    Address
-                                </span>
-
-                                <strong>
-                                    {
-                                        selectedPatient.address ||
-                                        "Not provided"
-                                    }
-                                </strong>
-
-                            </div>
-
-
-                            <div className="detail-full">
-
-                                <span>
-                                    Medical Notes
+                                    Reason
                                 </span>
 
                                 <p>
                                     {
-                                        selectedPatient.medical_notes ||
-                                        "No medical notes recorded."
+                                        selectedAppointment.reason ||
+                                        "Not provided"
+                                    }
+                                </p>
+
+                            </div>
+
+
+                            <div className="appointment-detail-full">
+
+                                <span>
+                                    Consultation Notes
+                                </span>
+
+                                <p>
+                                    {
+                                        selectedAppointment.consultation_notes ||
+                                        "No consultation notes recorded."
                                     }
                                 </p>
 
@@ -2131,13 +2335,13 @@ function PatientsPage() {
                         </div>
 
 
-                        <div className="details-actions">
+                        <div className="appointment-details-actions">
 
                             <button
                                 type="button"
-                                className="patient-cancel-button"
+                                className="appointment-cancel-button"
                                 onClick={() =>
-                                    setSelectedPatient(
+                                    setSelectedAppointment(
                                         null
                                     )
                                 }
@@ -2148,22 +2352,21 @@ function PatientsPage() {
 
                             <button
                                 type="button"
-                                className="patient-save-button"
+                                className="appointment-save-button"
                                 onClick={() => {
+                                    const appointment =
+                                        selectedAppointment;
 
-                                    const patient =
-                                        selectedPatient;
-
-                                    setSelectedPatient(
+                                    setSelectedAppointment(
                                         null
                                     );
 
                                     openEditForm(
-                                        patient
+                                        appointment
                                     );
                                 }}
                             >
-                                Edit Patient
+                                Edit Appointment
                             </button>
 
                         </div>
@@ -2171,18 +2374,19 @@ function PatientsPage() {
                     </div>
 
                 </div>
+
             )}
 
 
-            {patientToDelete && (
-                <div
-                    className="patient-modal-backdrop"
-                    onMouseDown={() => {
+            {appointmentToDelete && (
 
+                <div
+                    className="appointment-modal-backdrop"
+                    onMouseDown={() => {
                         if (
                             !deleting
                         ) {
-                            setPatientToDelete(
+                            setAppointmentToDelete(
                                 null
                             );
                         }
@@ -2190,7 +2394,7 @@ function PatientsPage() {
                 >
 
                     <div
-                        className="patient-modal delete-confirmation-modal"
+                        className="appointment-modal appointment-delete-modal"
                         onMouseDown={
                             (
                                 event
@@ -2199,23 +2403,23 @@ function PatientsPage() {
                         }
                     >
 
-                        <div className="delete-warning-icon">
+                        <div className="appointment-delete-icon">
                             !
                         </div>
 
 
                         <h2>
-                            Delete Patient?
+                            Delete Appointment?
                         </h2>
 
 
                         <p>
                             Are you sure you want to
-                            delete{" "}
+                            delete the appointment for{" "}
 
                             <strong>
                                 {
-                                    patientToDelete.full_name
+                                    appointmentToDelete.patient_name
                                 }
                             </strong>
 
@@ -2223,16 +2427,16 @@ function PatientsPage() {
                         </p>
 
 
-                        <div className="delete-modal-actions">
+                        <div className="appointment-delete-actions">
 
                             <button
                                 type="button"
-                                className="patient-cancel-button"
+                                className="appointment-cancel-button"
                                 disabled={
                                     deleting
                                 }
                                 onClick={() =>
-                                    setPatientToDelete(
+                                    setAppointmentToDelete(
                                         null
                                     )
                                 }
@@ -2243,7 +2447,7 @@ function PatientsPage() {
 
                             <button
                                 type="button"
-                                className="confirm-delete-button"
+                                className="appointment-confirm-delete"
                                 disabled={
                                     deleting
                                 }
@@ -2254,7 +2458,7 @@ function PatientsPage() {
                                 {
                                     deleting
                                         ? "Deleting..."
-                                        : "Delete Patient"
+                                        : "Delete Appointment"
                                 }
                             </button>
 
@@ -2263,6 +2467,7 @@ function PatientsPage() {
                     </div>
 
                 </div>
+
             )}
 
         </div>
@@ -2270,4 +2475,4 @@ function PatientsPage() {
 }
 
 
-export default PatientsPage;
+export default AppointmentsPage;
