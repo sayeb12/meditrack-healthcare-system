@@ -252,6 +252,41 @@
     gap: 10px;
 }
 
+.doctor-archive-toggle {
+    min-height: 39px;
+
+    padding: 8px 12px;
+
+    border: 1px solid #dcebe7;
+    border-radius: 11px;
+
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    background: #f2f9f7;
+    color: #44635c;
+
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.doctor-archive-toggle input {
+    width: 15px;
+    height: 15px;
+
+    margin: 0;
+
+    accent-color: #137f6d;
+}
+
+.doctor-archive-toggle:has(input:disabled) {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
 .doctor-add-button {
     min-height: 39px;
 
@@ -460,17 +495,27 @@
     color: #7d8796;
 }
 
+.doctor-status.archived {
+    background: #fff0f0;
+
+    color: #ad4a4a;
+}
+
 
 .doctor-row-actions {
     display: flex;
     align-items: center;
+
+    flex-wrap: wrap;
 
     gap: 7px;
 }
 
 
 .doctor-view-button,
-.doctor-edit-button {
+.doctor-edit-button,
+.doctor-archive-button,
+.doctor-restore-button {
     min-height: 31px;
 
     padding: 6px 10px;
@@ -490,15 +535,24 @@
 }
 
 
-.doctor-edit-button {
+.doctor-edit-button,
+.doctor-restore-button {
     background: #e7f7f2;
 
     color: #137f6d;
 }
 
+.doctor-archive-button {
+    background: #fff0f0;
+
+    color: #ad4a4a;
+}
+
 
 .doctor-view-button:hover,
-.doctor-edit-button:hover {
+.doctor-edit-button:hover,
+.doctor-archive-button:hover,
+.doctor-restore-button:hover {
     filter: brightness(0.97);
 }
 
@@ -955,15 +1009,19 @@
 
         display: flex;
 
+        flex-wrap: wrap;
+
         gap: 8px;
     }
 
 
     .doctor-mobile-view,
-    .doctor-mobile-edit {
+    .doctor-mobile-edit,
+    .doctor-mobile-archive,
+    .doctor-mobile-restore {
         width: 100%;
         min-height: 39px;
-        flex: 1;
+        flex: 1 1 120px;
 
         border: 0;
 
@@ -979,10 +1037,17 @@
     }
 
 
-    .doctor-mobile-edit {
+    .doctor-mobile-edit,
+    .doctor-mobile-restore {
         background: #137f6d;
 
         color: #ffffff;
+    }
+
+    .doctor-mobile-archive {
+        background: #fff0f0;
+
+        color: #ad4a4a;
     }
 
 }
@@ -1046,6 +1111,7 @@
         width: 100%;
 
         justify-content: space-between;
+        flex-wrap: wrap;
     }
 
 
@@ -1081,8 +1147,18 @@
         flex-direction: column;
     }
 
+    .doctor-archive-toggle {
+        width: 100%;
+
+        justify-content: center;
+    }
+
     .doctor-add-button {
         width: 100%;
+    }
+
+    .doctor-mobile-actions {
+        flex-direction: column;
     }
 
 

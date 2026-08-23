@@ -24,6 +24,9 @@ import AddDoctorModal
 import EditDoctorModal
     from "../components/doctors/EditDoctorModal";
 
+import DoctorLifecycleModal
+    from "../components/doctors/DoctorLifecycleModal";
+
 import "./DashboardPage.css";
 import "./DoctorsPage.css";
 
@@ -106,6 +109,24 @@ function DoctorsPage() {
     ] = useState(null);
 
 
+    const [
+        includeArchived,
+        setIncludeArchived,
+    ] = useState(false);
+
+
+    const [
+        lifecycleDoctor,
+        setLifecycleDoctor,
+    ] = useState(null);
+
+
+    const [
+        lifecycleAction,
+        setLifecycleAction,
+    ] = useState(null);
+
+
     const loadDoctors =
         useCallback(
             async (
@@ -117,9 +138,14 @@ function DoctorsPage() {
 
 
                 try {
+                    const endpoint =
+                        includeArchived
+                            ? "/doctors/?include_archived=true"
+                            : "/doctors/";
+
                     const data =
                         await apiRequest(
-                            "/doctors/"
+                            endpoint
                         );
 
 
@@ -172,7 +198,10 @@ function DoctorsPage() {
                     }
                 }
             },
-            [navigate]
+            [
+                includeArchived,
+                navigate,
+            ]
         );
 
 
@@ -220,6 +249,37 @@ function DoctorsPage() {
             },
             [loadDoctors]
         );
+
+
+    const closeLifecycleModal =
+        useCallback(() => {
+            setLifecycleDoctor(null);
+            setLifecycleAction(null);
+        }, []);
+
+
+    const handleDoctorChanged =
+        useCallback(
+            () => {
+                closeLifecycleModal();
+
+                return loadDoctors();
+            },
+            [
+                closeLifecycleModal,
+                loadDoctors,
+            ]
+        );
+
+
+    const openLifecycleModal =
+        (
+            doctor,
+            action
+        ) => {
+            setLifecycleDoctor(doctor);
+            setLifecycleAction(action);
+        };
 
 
     const filteredDoctors =
@@ -272,6 +332,7 @@ function DoctorsPage() {
             () =>
                 doctors.filter(
                     (doctor) =>
+                        !doctor.is_archived &&
                         doctor.is_available
                 ).length,
             [doctors]
@@ -690,6 +751,33 @@ function DoctorsPage() {
 
 
                             {user?.is_staff === true && (
+                                <label className="doctor-archive-toggle">
+                                    <input
+                                        type="checkbox"
+                                        checked={
+                                            includeArchived
+                                        }
+                                        disabled={loading}
+                                        onChange={
+                                            (
+                                                event
+                                            ) =>
+                                                setIncludeArchived(
+                                                    event
+                                                        .target
+                                                        .checked
+                                                )
+                                        }
+                                    />
+
+                                    <span>
+                                        Include Archived
+                                    </span>
+                                </label>
+                            )}
+
+
+                            {user?.is_staff === true && (
                                 <button
                                     type="button"
                                     className="doctor-add-button"
@@ -899,16 +987,20 @@ function DoctorsPage() {
                                                                         <span
                                                                             className={
                                                                                 `doctor-status ${
-                                                                                    doctor.is_available
-                                                                                        ? "available"
-                                                                                        : "unavailable"
+                                                                                    doctor.is_archived
+                                                                                        ? "archived"
+                                                                                        : doctor.is_available
+                                                                                            ? "available"
+                                                                                            : "unavailable"
                                                                                 }`
                                                                             }
                                                                         >
                                                                             {
-                                                                                doctor.is_available
-                                                                                    ? "Available"
-                                                                                    : "Unavailable"
+                                                                                doctor.is_archived
+                                                                                    ? "Archived"
+                                                                                    : doctor.is_available
+                                                                                        ? "Available"
+                                                                                        : "Unavailable"
                                                                             }
                                                                         </span>
 
@@ -933,17 +1025,49 @@ function DoctorsPage() {
 
 
                                                                             {user?.is_staff === true && (
-                                                                                <button
-                                                                                    type="button"
-                                                                                    className="doctor-edit-button"
-                                                                                    onClick={() =>
-                                                                                        setEditingDoctor(
-                                                                                            doctor
-                                                                                        )
-                                                                                    }
-                                                                                >
-                                                                                    Edit
-                                                                                </button>
+                                                                                doctor.is_archived
+                                                                                    ? (
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            className="doctor-restore-button"
+                                                                                            onClick={() =>
+                                                                                                openLifecycleModal(
+                                                                                                    doctor,
+                                                                                                    "restore"
+                                                                                                )
+                                                                                            }
+                                                                                        >
+                                                                                            Restore
+                                                                                        </button>
+                                                                                    )
+                                                                                    : (
+                                                                                        <>
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                className="doctor-edit-button"
+                                                                                                onClick={() =>
+                                                                                                    setEditingDoctor(
+                                                                                                        doctor
+                                                                                                    )
+                                                                                                }
+                                                                                            >
+                                                                                                Edit
+                                                                                            </button>
+
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                className="doctor-archive-button"
+                                                                                                onClick={() =>
+                                                                                                    openLifecycleModal(
+                                                                                                        doctor,
+                                                                                                        "archive"
+                                                                                                    )
+                                                                                                }
+                                                                                            >
+                                                                                                Archive
+                                                                                            </button>
+                                                                                        </>
+                                                                                    )
                                                                             )}
 
                                                                         </div>
@@ -1010,16 +1134,20 @@ function DoctorsPage() {
                                                                 <span
                                                                     className={
                                                                         `doctor-status ${
-                                                                            doctor.is_available
-                                                                                ? "available"
-                                                                                : "unavailable"
+                                                                            doctor.is_archived
+                                                                                ? "archived"
+                                                                                : doctor.is_available
+                                                                                    ? "available"
+                                                                                    : "unavailable"
                                                                         }`
                                                                     }
                                                                 >
                                                                     {
-                                                                        doctor.is_available
-                                                                            ? "Available"
-                                                                            : "Unavailable"
+                                                                        doctor.is_archived
+                                                                            ? "Archived"
+                                                                            : doctor.is_available
+                                                                                ? "Available"
+                                                                                : "Unavailable"
                                                                     }
                                                                 </span>
 
@@ -1117,17 +1245,49 @@ function DoctorsPage() {
 
 
                                                                 {user?.is_staff === true && (
-                                                                    <button
-                                                                        type="button"
-                                                                        className="doctor-mobile-edit"
-                                                                        onClick={() =>
-                                                                            setEditingDoctor(
-                                                                                doctor
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        Edit Doctor
-                                                                    </button>
+                                                                    doctor.is_archived
+                                                                        ? (
+                                                                            <button
+                                                                                type="button"
+                                                                                className="doctor-mobile-restore"
+                                                                                onClick={() =>
+                                                                                    openLifecycleModal(
+                                                                                        doctor,
+                                                                                        "restore"
+                                                                                    )
+                                                                                }
+                                                                            >
+                                                                                Restore Doctor
+                                                                            </button>
+                                                                        )
+                                                                        : (
+                                                                            <>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    className="doctor-mobile-edit"
+                                                                                    onClick={() =>
+                                                                                        setEditingDoctor(
+                                                                                            doctor
+                                                                                        )
+                                                                                    }
+                                                                                >
+                                                                                    Edit Doctor
+                                                                                </button>
+
+                                                                                <button
+                                                                                    type="button"
+                                                                                    className="doctor-mobile-archive"
+                                                                                    onClick={() =>
+                                                                                        openLifecycleModal(
+                                                                                            doctor,
+                                                                                            "archive"
+                                                                                        )
+                                                                                    }
+                                                                                >
+                                                                                    Archive Doctor
+                                                                                </button>
+                                                                            </>
+                                                                        )
                                                                 )}
 
                                                             </div>
@@ -1169,6 +1329,20 @@ function DoctorsPage() {
                 }
                 onDoctorUpdated={
                     handleDoctorUpdated
+                }
+            />
+
+
+            <DoctorLifecycleModal
+                isOpen={Boolean(
+                    lifecycleDoctor &&
+                    lifecycleAction
+                )}
+                doctor={lifecycleDoctor}
+                action={lifecycleAction}
+                onClose={closeLifecycleModal}
+                onDoctorChanged={
+                    handleDoctorChanged
                 }
             />
 
@@ -1254,16 +1428,20 @@ function DoctorsPage() {
                                 <span
                                     className={
                                         `doctor-status ${
-                                            selectedDoctor.is_available
-                                                ? "available"
-                                                : "unavailable"
+                                            selectedDoctor.is_archived
+                                                ? "archived"
+                                                : selectedDoctor.is_available
+                                                    ? "available"
+                                                    : "unavailable"
                                         }`
                                     }
                                 >
                                     {
-                                        selectedDoctor.is_available
-                                            ? "Available"
-                                            : "Unavailable"
+                                        selectedDoctor.is_archived
+                                            ? "Archived"
+                                            : selectedDoctor.is_available
+                                                ? "Available"
+                                                : "Unavailable"
                                     }
                                 </span>
 
