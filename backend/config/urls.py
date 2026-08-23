@@ -31,6 +31,11 @@ urlpatterns = [
     ),
 
     path(
+        "api/users/",
+        include("accounts.user_urls")
+    ),
+
+    path(
     "api/patients/",
     include("patients.urls")
     ),

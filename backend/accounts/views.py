@@ -17,6 +17,7 @@ from django.utils.http import (
 from rest_framework import status
 from rest_framework.permissions import (
     AllowAny,
+    IsAdminUser,
     IsAuthenticated,
 )
 from rest_framework.response import Response
@@ -412,6 +413,36 @@ class CurrentUserView(APIView):
                 "language": user.language,
                 "is_staff": user.is_staff,
             },
+            status=status.HTTP_200_OK
+        )
+
+
+class EligibleDoctorUsersView(APIView):
+
+    permission_classes = [
+        IsAuthenticated,
+        IsAdminUser,
+    ]
+
+    def get(self, request):
+
+        users = (
+            User.objects
+            .filter(
+                is_active=True,
+                doctor_profile__isnull=True,
+            )
+            .order_by("full_name")
+            .values(
+                "id",
+                "full_name",
+                "email",
+                "phone_number",
+            )
+        )
+
+        return Response(
+            list(users),
             status=status.HTTP_200_OK
         )
 
