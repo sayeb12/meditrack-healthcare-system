@@ -329,3 +329,223 @@ class DoctorAPITests(TestCase):
                 doctor=self.doctor,
             ).exists()
         )
+
+    def test_staff_can_restore_archived_doctor(self):
+
+        self.doctor.is_archived = True
+        self.doctor.save(
+            update_fields=["is_archived"]
+        )
+
+        response = self.client.post(
+            reverse(
+                "doctor-restore",
+                args=[self.doctor.pk]
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertFalse(response.data["is_archived"])
+
+        self.doctor.refresh_from_db()
+        self.assertFalse(self.doctor.is_archived)
+
+    def test_restoring_active_doctor_is_idempotent(self):
+
+        doctor_count = Doctor.objects.count()
+
+        response = self.client.post(
+            reverse(
+                "doctor-restore",
+                args=[self.doctor.pk]
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertEqual(response.data["id"], self.doctor.pk)
+        self.assertFalse(response.data["is_archived"])
+        self.assertEqual(Doctor.objects.count(), doctor_count)
+
+    def test_non_staff_cannot_restore_doctor(self):
+
+        self.doctor.is_archived = True
+        self.doctor.save(
+            update_fields=["is_archived"]
+        )
+        self.client.force_authenticate(
+            user=self.doctor_user
+        )
+
+        response = self.client.post(
+            reverse(
+                "doctor-restore",
+                args=[self.doctor.pk]
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN
+        )
+
+        self.doctor.refresh_from_db()
+        self.assertTrue(self.doctor.is_archived)
+
+    def test_restored_doctor_appears_in_normal_list(self):
+
+        self.doctor.is_archived = True
+        self.doctor.save(
+            update_fields=["is_archived"]
+        )
+
+        restore_response = self.client.post(
+            reverse(
+                "doctor-restore",
+                args=[self.doctor.pk]
+            )
+        )
+        response = self.client.get(
+            reverse("doctor-list-create")
+        )
+
+        self.assertEqual(
+            restore_response.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertIn(
+            self.doctor.pk,
+            [doctor["id"] for doctor in response.data]
+        )
+
+    def test_staff_can_include_archived_doctors(self):
+
+        self.doctor.is_archived = True
+        self.doctor.save(
+            update_fields=["is_archived"]
+        )
+
+        response = self.client.get(
+            reverse("doctor-list-create"),
+            {"include_archived": "true"},
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertIn(
+            self.doctor.pk,
+            [doctor["id"] for doctor in response.data]
+        )
+
+    def test_non_staff_cannot_include_archived_doctors(self):
+
+        self.client.force_authenticate(
+            user=self.doctor_user
+        )
+
+        response = self.client.get(
+            reverse("doctor-list-create"),
+            {"include_archived": "true"},
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN
+        )
+
+    def test_anonymous_user_cannot_include_archived_doctors(self):
+
+        self.client.force_authenticate(user=None)
+
+        response = self.client.get(
+            reverse("doctor-list-create"),
+            {"include_archived": "true"},
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_401_UNAUTHORIZED
+        )
+
+    def test_non_staff_cannot_retrieve_archived_doctor(self):
+
+        self.doctor.is_archived = True
+        self.doctor.save(
+            update_fields=["is_archived"]
+        )
+
+        self.client.force_authenticate(
+            user=self.doctor_user
+        )
+
+        response = self.client.get(
+            reverse(
+                "doctor-detail",
+                args=[self.doctor.pk]
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND
+        )
+
+    def test_staff_can_retrieve_archived_doctor(self):
+
+        self.doctor.is_archived = True
+        self.doctor.save(
+            update_fields=["is_archived"]
+        )
+
+        response = self.client.get(
+            reverse(
+                "doctor-detail",
+                args=[self.doctor.pk]
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertTrue(response.data["is_archived"])
+
+    def test_active_doctor_behavior_is_unchanged(self):
+
+        self.client.force_authenticate(
+            user=self.doctor_user
+        )
+
+        detail_response = self.client.get(
+            reverse(
+                "doctor-detail",
+                args=[self.doctor.pk]
+            )
+        )
+        list_response = self.client.get(
+            reverse("doctor-list-create")
+        )
+
+        self.assertEqual(
+            detail_response.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertEqual(
+            list_response.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertIn(
+            self.doctor.pk,
+            [doctor["id"] for doctor in list_response.data]
+        )
