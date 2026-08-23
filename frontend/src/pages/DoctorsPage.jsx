@@ -21,6 +21,9 @@ import useCurrentUser
 import AddDoctorModal
     from "../components/doctors/AddDoctorModal";
 
+import EditDoctorModal
+    from "../components/doctors/EditDoctorModal";
+
 import "./DashboardPage.css";
 import "./DoctorsPage.css";
 
@@ -95,6 +98,12 @@ function DoctorsPage() {
         addDoctorOpen,
         setAddDoctorOpen,
     ] = useState(false);
+
+
+    const [
+        editingDoctor,
+        setEditingDoctor,
+    ] = useState(null);
 
 
     const loadDoctors =
@@ -195,6 +204,17 @@ function DoctorsPage() {
         useCallback(
             () => {
                 setAddDoctorOpen(false);
+
+                return loadDoctors();
+            },
+            [loadDoctors]
+        );
+
+
+    const handleDoctorUpdated =
+        useCallback(
+            () => {
+                setEditingDoctor(null);
 
                 return loadDoctors();
             },
@@ -897,17 +917,36 @@ function DoctorsPage() {
 
                                                                     <td>
 
-                                                                        <button
-                                                                            type="button"
-                                                                            className="doctor-view-button"
-                                                                            onClick={() =>
-                                                                                setSelectedDoctor(
-                                                                                    doctor
-                                                                                )
-                                                                            }
-                                                                        >
-                                                                            View
-                                                                        </button>
+                                                                        <div className="doctor-row-actions">
+
+                                                                            <button
+                                                                                type="button"
+                                                                                className="doctor-view-button"
+                                                                                onClick={() =>
+                                                                                    setSelectedDoctor(
+                                                                                        doctor
+                                                                                    )
+                                                                                }
+                                                                            >
+                                                                                View
+                                                                            </button>
+
+
+                                                                            {user?.is_staff === true && (
+                                                                                <button
+                                                                                    type="button"
+                                                                                    className="doctor-edit-button"
+                                                                                    onClick={() =>
+                                                                                        setEditingDoctor(
+                                                                                            doctor
+                                                                                        )
+                                                                                    }
+                                                                                >
+                                                                                    Edit
+                                                                                </button>
+                                                                            )}
+
+                                                                        </div>
 
                                                                     </td>
 
@@ -1062,17 +1101,36 @@ function DoctorsPage() {
                                                             </div>
 
 
-                                                            <button
-                                                                type="button"
-                                                                className="doctor-mobile-view"
-                                                                onClick={() =>
-                                                                    setSelectedDoctor(
-                                                                        doctor
-                                                                    )
-                                                                }
-                                                            >
-                                                                View Doctor
-                                                            </button>
+                                                            <div className="doctor-mobile-actions">
+
+                                                                <button
+                                                                    type="button"
+                                                                    className="doctor-mobile-view"
+                                                                    onClick={() =>
+                                                                        setSelectedDoctor(
+                                                                            doctor
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    View Doctor
+                                                                </button>
+
+
+                                                                {user?.is_staff === true && (
+                                                                    <button
+                                                                        type="button"
+                                                                        className="doctor-mobile-edit"
+                                                                        onClick={() =>
+                                                                            setEditingDoctor(
+                                                                                doctor
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        Edit Doctor
+                                                                    </button>
+                                                                )}
+
+                                                            </div>
 
                                                         </article>
                                                     )
@@ -1097,6 +1155,20 @@ function DoctorsPage() {
                 }
                 onDoctorCreated={
                     handleDoctorsRefresh
+                }
+            />
+
+
+            <EditDoctorModal
+                isOpen={Boolean(
+                    editingDoctor
+                )}
+                doctor={editingDoctor}
+                onClose={() =>
+                    setEditingDoctor(null)
+                }
+                onDoctorUpdated={
+                    handleDoctorUpdated
                 }
             />
 

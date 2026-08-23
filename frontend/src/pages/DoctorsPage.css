@@ -461,7 +461,16 @@
 }
 
 
-.doctor-view-button {
+.doctor-row-actions {
+    display: flex;
+    align-items: center;
+
+    gap: 7px;
+}
+
+
+.doctor-view-button,
+.doctor-edit-button {
     min-height: 31px;
 
     padding: 6px 10px;
@@ -481,7 +490,15 @@
 }
 
 
-.doctor-view-button:hover {
+.doctor-edit-button {
+    background: #e7f7f2;
+
+    color: #137f6d;
+}
+
+
+.doctor-view-button:hover,
+.doctor-edit-button:hover {
     filter: brightness(0.97);
 }
 
@@ -933,11 +950,20 @@
     }
 
 
-    .doctor-mobile-view {
+    .doctor-mobile-actions {
+        margin-top: 13px;
+
+        display: flex;
+
+        gap: 8px;
+    }
+
+
+    .doctor-mobile-view,
+    .doctor-mobile-edit {
         width: 100%;
         min-height: 39px;
-
-        margin-top: 13px;
+        flex: 1;
 
         border: 0;
 
@@ -950,6 +976,13 @@
         cursor: pointer;
 
         font-weight: 800;
+    }
+
+
+    .doctor-mobile-edit {
+        background: #137f6d;
+
+        color: #ffffff;
     }
 
 }
@@ -1051,6 +1084,7 @@
     .doctor-add-button {
         width: 100%;
     }
+
 
     .doctors-content {
         border-radius: 15px;
