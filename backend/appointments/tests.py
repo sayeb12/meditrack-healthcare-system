@@ -2,6 +2,7 @@ from datetime import date, time, timedelta
 
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -184,6 +185,39 @@ class AppointmentReadAccessTests(TestCase):
             appointment["id"]
             for appointment in data
         }
+
+    def create_lifecycle_appointment(
+        self,
+        appointment_status,
+        appointment_time,
+    ):
+
+        return Appointment.objects.create(
+            created_by=self.other_creator,
+            patient=self.other_patient,
+            doctor=self.doctor,
+            appointment_date=(
+                date.today() + timedelta(days=2)
+            ),
+            appointment_time=appointment_time,
+            status=appointment_status,
+            reason="Lifecycle appointment",
+        )
+
+    def post_lifecycle_action(
+        self,
+        appointment,
+        action,
+    ):
+
+        return self.client.post(
+            reverse(
+                f"appointment-{action}",
+                args=[appointment.pk]
+            ),
+            {},
+            format="json",
+        )
 
     def test_anonymous_user_receives_401(self):
 
@@ -768,3 +802,383 @@ class AppointmentReadAccessTests(TestCase):
                     status.HTTP_400_BAD_REQUEST
                 )
                 self.assertIn("doctor", response.data)
+
+    def test_confirmed_status_is_available_after_migration(self):
+
+        status_choices = dict(
+            Appointment._meta
+            .get_field("status")
+            .choices
+        )
+
+        self.assertEqual(
+            status_choices["confirmed"],
+            "Confirmed"
+        )
+
+        self.creator_appointment.status = "confirmed"
+        self.creator_appointment.save(
+            update_fields=["status"]
+        )
+        self.creator_appointment.refresh_from_db()
+
+        self.assertEqual(
+            self.creator_appointment.status,
+            "confirmed"
+        )
+
+    def test_all_valid_lifecycle_transitions(self):
+
+        self.authenticate(self.doctor_user)
+
+        transitions = [
+            (
+                "confirm",
+                "scheduled",
+                "confirmed",
+            ),
+            (
+                "cancel",
+                "scheduled",
+                "cancelled",
+            ),
+            (
+                "complete",
+                "confirmed",
+                "completed",
+            ),
+            (
+                "cancel",
+                "confirmed",
+                "cancelled",
+            ),
+            (
+                "no-show",
+                "confirmed",
+                "no_show",
+            ),
+        ]
+
+        for index, transition in enumerate(transitions):
+            action, source_status, target_status = transition
+
+            with self.subTest(
+                source=source_status,
+                target=target_status,
+            ):
+                appointment = self.create_lifecycle_appointment(
+                    source_status,
+                    time(13, index),
+                )
+
+                response = self.post_lifecycle_action(
+                    appointment,
+                    action,
+                )
+
+                self.assertEqual(
+                    response.status_code,
+                    status.HTTP_200_OK
+                )
+                self.assertEqual(
+                    response.data["status"],
+                    target_status
+                )
+
+                appointment.refresh_from_db()
+                self.assertEqual(
+                    appointment.status,
+                    target_status
+                )
+
+    def test_invalid_lifecycle_transitions_are_rejected(self):
+
+        self.authenticate(self.staff_doctor_user)
+
+        invalid_transitions = [
+            (
+                "confirm",
+                "confirmed",
+            ),
+            (
+                "complete",
+                "scheduled",
+            ),
+            (
+                "no-show",
+                "scheduled",
+            ),
+            (
+                "cancel",
+                "completed",
+            ),
+        ]
+
+        for index, transition in enumerate(
+            invalid_transitions
+        ):
+            action, source_status = transition
+
+            with self.subTest(
+                action=action,
+                source=source_status,
+            ):
+                appointment = self.create_lifecycle_appointment(
+                    source_status,
+                    time(14, index),
+                )
+
+                response = self.post_lifecycle_action(
+                    appointment,
+                    action,
+                )
+
+                self.assertEqual(
+                    response.status_code,
+                    status.HTTP_400_BAD_REQUEST
+                )
+                self.assertIn("status", response.data)
+
+                appointment.refresh_from_db()
+                self.assertEqual(
+                    appointment.status,
+                    source_status
+                )
+
+    def test_creator_can_cancel_own_appointment(self):
+
+        self.authenticate(self.creator)
+        appointment_count = Appointment.objects.count()
+
+        response = self.post_lifecycle_action(
+            self.creator_appointment,
+            "cancel",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertEqual(
+            response.data["status"],
+            "cancelled"
+        )
+
+        self.creator_appointment.refresh_from_db()
+        self.assertEqual(
+            self.creator_appointment.status,
+            "cancelled"
+        )
+        self.assertEqual(
+            Appointment.objects.count(),
+            appointment_count
+        )
+
+    def test_creator_cannot_use_clinical_lifecycle_actions(self):
+
+        self.authenticate(self.creator)
+
+        actions = [
+            (
+                "confirm",
+                "scheduled",
+            ),
+            (
+                "complete",
+                "confirmed",
+            ),
+            (
+                "no-show",
+                "confirmed",
+            ),
+        ]
+
+        for index, action_details in enumerate(actions):
+            action, appointment_status = action_details
+
+            with self.subTest(action=action):
+                appointment = Appointment.objects.create(
+                    created_by=self.creator,
+                    patient=self.creator_patient,
+                    doctor=self.other_doctor,
+                    appointment_date=(
+                        date.today() + timedelta(days=2)
+                    ),
+                    appointment_time=time(15, index),
+                    status=appointment_status,
+                )
+
+                response = self.post_lifecycle_action(
+                    appointment,
+                    action,
+                )
+
+                self.assertEqual(
+                    response.status_code,
+                    status.HTTP_404_NOT_FOUND
+                )
+
+                appointment.refresh_from_db()
+                self.assertEqual(
+                    appointment.status,
+                    appointment_status
+                )
+
+    def test_doctor_cannot_confirm_unassigned_created_appointment(self):
+
+        self.authenticate(self.doctor_user)
+
+        response = self.post_lifecycle_action(
+            self.doctor_created_appointment,
+            "confirm",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND
+        )
+
+        self.doctor_created_appointment.refresh_from_db()
+        self.assertEqual(
+            self.doctor_created_appointment.status,
+            "scheduled"
+        )
+
+    def test_staff_can_manage_unrelated_appointment_lifecycle(self):
+
+        self.authenticate(self.staff_doctor_user)
+
+        confirm_response = self.post_lifecycle_action(
+            self.unrelated_appointment,
+            "confirm",
+        )
+        complete_response = self.post_lifecycle_action(
+            self.unrelated_appointment,
+            "complete",
+        )
+
+        self.assertEqual(
+            confirm_response.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertEqual(
+            complete_response.status_code,
+            status.HTTP_200_OK
+        )
+
+        self.unrelated_appointment.refresh_from_db()
+        self.assertEqual(
+            self.unrelated_appointment.status,
+            "completed"
+        )
+
+    def test_unrelated_user_cannot_cancel_appointment(self):
+
+        self.authenticate(self.creator)
+
+        response = self.post_lifecycle_action(
+            self.assigned_appointment,
+            "cancel",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND
+        )
+
+        self.assigned_appointment.refresh_from_db()
+        self.assertEqual(
+            self.assigned_appointment.status,
+            "scheduled"
+        )
+
+    def test_lifecycle_action_preserves_appointment_data(self):
+
+        previous_updated_at = (
+            timezone.now() - timedelta(days=1)
+        )
+        Appointment.objects.filter(
+            pk=self.assigned_appointment.pk
+        ).update(
+            consultation_notes="Existing clinical notes",
+            updated_at=previous_updated_at,
+        )
+        self.assigned_appointment.refresh_from_db()
+
+        preserved_values = {
+            "created_by_id": (
+                self.assigned_appointment.created_by_id
+            ),
+            "patient_id": self.assigned_appointment.patient_id,
+            "doctor_id": self.assigned_appointment.doctor_id,
+            "appointment_date": (
+                self.assigned_appointment.appointment_date
+            ),
+            "appointment_time": (
+                self.assigned_appointment.appointment_time
+            ),
+            "reason": self.assigned_appointment.reason,
+            "consultation_notes": (
+                self.assigned_appointment.consultation_notes
+            ),
+            "created_at": self.assigned_appointment.created_at,
+        }
+
+        self.authenticate(self.doctor_user)
+        response = self.post_lifecycle_action(
+            self.assigned_appointment,
+            "confirm",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
+
+        self.assigned_appointment.refresh_from_db()
+
+        for field, expected_value in preserved_values.items():
+            self.assertEqual(
+                getattr(self.assigned_appointment, field),
+                expected_value,
+            )
+
+        self.assertEqual(
+            self.assigned_appointment.status,
+            "confirmed"
+        )
+        self.assertGreater(
+            self.assigned_appointment.updated_at,
+            previous_updated_at
+        )
+
+    def test_confirmed_appointment_keeps_time_slot_reserved(self):
+
+        self.assigned_appointment.status = "confirmed"
+        self.assigned_appointment.save(
+            update_fields=["status"]
+        )
+        self.authenticate(self.creator)
+
+        response = self.client.post(
+            reverse("appointment-list-create"),
+            {
+                "patient": self.creator_patient.pk,
+                "doctor": self.doctor.pk,
+                "appointment_date": str(
+                    self.assigned_appointment.appointment_date
+                ),
+                "appointment_time": "10:00",
+                "reason": "Conflicting appointment",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST
+        )
+        self.assertIn(
+            "appointment_time",
+            response.data
+        )

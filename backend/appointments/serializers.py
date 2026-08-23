@@ -141,7 +141,10 @@ class AppointmentWriteValidationMixin:
                     doctor=doctor,
                     appointment_date=appointment_date,
                     appointment_time=appointment_time,
-                    status="scheduled"
+                    status__in=[
+                        "scheduled",
+                        "confirmed",
+                    ]
                 )
             )
 
@@ -276,3 +279,38 @@ class AppointmentUpdateSerializer(
             raise serializers.ValidationError(errors)
 
         return super().validate(attrs)
+
+
+class AppointmentLifecycleSerializer(
+    serializers.Serializer
+):
+
+    def validate(self, attrs):
+
+        current_status = self.instance.status
+        target_status = self.context["target_status"]
+        allowed_source_statuses = self.context[
+            "allowed_source_statuses"
+        ]
+
+        if current_status not in allowed_source_statuses:
+            raise serializers.ValidationError({
+                "status": (
+                    f"Cannot change appointment status from "
+                    f"{current_status} to {target_status}."
+                )
+            })
+
+        return attrs
+
+    def update(self, instance, validated_data):
+
+        instance.status = self.context["target_status"]
+        instance.save(
+            update_fields=[
+                "status",
+                "updated_at",
+            ]
+        )
+
+        return instance
