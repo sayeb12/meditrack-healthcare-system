@@ -1,4 +1,5 @@
 import {
+    useCallback,
     useEffect,
     useMemo,
     useState,
@@ -16,6 +17,9 @@ import {
 
 import useCurrentUser
     from "../hooks/useCurrentUser";
+
+import AddDoctorModal
+    from "../components/doctors/AddDoctorModal";
 
 import "./DashboardPage.css";
 import "./DoctorsPage.css";
@@ -87,14 +91,17 @@ function DoctorsPage() {
     ] = useState(null);
 
 
-    useEffect(() => {
-        let cancelled =
-            false;
+    const [
+        addDoctorOpen,
+        setAddDoctorOpen,
+    ] = useState(false);
 
 
-        const loadDoctors =
-            async () => {
-
+    const loadDoctors =
+        useCallback(
+            async (
+                shouldApply = () => true
+            ) => {
                 setLoading(true);
 
                 setError("");
@@ -107,7 +114,7 @@ function DoctorsPage() {
                         );
 
 
-                    if (cancelled) {
+                    if (!shouldApply()) {
                         return;
                     }
 
@@ -122,7 +129,7 @@ function DoctorsPage() {
                 catch (
                     requestError
                 ) {
-                    if (cancelled) {
+                    if (!shouldApply()) {
                         return;
                     }
 
@@ -151,18 +158,29 @@ function DoctorsPage() {
                 }
 
                 finally {
-                    if (
-                        !cancelled
-                    ) {
-                        setLoading(
-                            false
-                        );
+                    if (shouldApply()) {
+                        setLoading(false);
                     }
                 }
+            },
+            [navigate]
+        );
+
+
+    useEffect(() => {
+        let cancelled =
+            false;
+
+
+        const loadInitialDoctors =
+            async () => {
+                await loadDoctors(
+                    () => !cancelled
+                );
             };
 
 
-        loadDoctors();
+        loadInitialDoctors();
 
 
         return () => {
@@ -170,7 +188,18 @@ function DoctorsPage() {
                 true;
         };
 
-    }, [navigate]);
+    }, [loadDoctors]);
+
+
+    const handleDoctorsRefresh =
+        useCallback(
+            () => {
+                setAddDoctorOpen(false);
+
+                return loadDoctors();
+            },
+            [loadDoctors]
+        );
 
 
     const filteredDoctors =
@@ -618,22 +647,41 @@ function DoctorsPage() {
                         </div>
 
 
-                        <div className="doctor-count">
+                        <div className="doctors-toolbar-actions">
 
-                            <strong>
-                                {
-                                    filteredDoctors.length
-                                }
-                            </strong>
+                            <div className="doctor-count">
 
-                            <span>
-                                {
-                                    filteredDoctors.length ===
-                                    1
-                                        ? "Doctor"
-                                        : "Doctors"
-                                }
-                            </span>
+                                <strong>
+                                    {
+                                        filteredDoctors.length
+                                    }
+                                </strong>
+
+                                <span>
+                                    {
+                                        filteredDoctors.length ===
+                                        1
+                                            ? "Doctor"
+                                            : "Doctors"
+                                    }
+                                </span>
+
+                            </div>
+
+
+                            {user?.is_staff === true && (
+                                <button
+                                    type="button"
+                                    className="doctor-add-button"
+                                    onClick={() =>
+                                        setAddDoctorOpen(
+                                            true
+                                        )
+                                    }
+                                >
+                                    Add Doctor
+                                </button>
+                            )}
 
                         </div>
 
@@ -1040,6 +1088,17 @@ function DoctorsPage() {
                 </section>
 
             </main>
+
+
+            <AddDoctorModal
+                isOpen={addDoctorOpen}
+                onClose={() =>
+                    setAddDoctorOpen(false)
+                }
+                onDoctorCreated={
+                    handleDoctorsRefresh
+                }
+            />
 
 
             {selectedDoctor && (
