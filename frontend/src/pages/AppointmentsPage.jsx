@@ -14,6 +14,9 @@ import {
     getRefreshToken,
 } from "../api/client";
 
+import useCurrentUser
+    from "../hooks/useCurrentUser";
+
 import "./DashboardPage.css";
 import "./AppointmentsPage.css";
 
@@ -26,28 +29,6 @@ const EMPTY_FORM = {
     status: "scheduled",
     reason: "",
     consultation_notes: "",
-};
-
-
-const getStoredUser = () => {
-    try {
-        const storedUser =
-            localStorage.getItem(
-                "meditrack_user"
-            );
-
-        if (!storedUser) {
-            return null;
-        }
-
-        return JSON.parse(
-            storedUser
-        );
-    }
-
-    catch {
-        return null;
-    }
 };
 
 
@@ -172,10 +153,8 @@ function AppointmentsPage() {
         useNavigate();
 
 
-    const [user] =
-        useState(
-            getStoredUser
-        );
+    const user =
+        useCurrentUser();
 
 
     const [

@@ -14,29 +14,10 @@ import {
     getRefreshToken,
 } from "../api/client";
 
+import useCurrentUser
+    from "../hooks/useCurrentUser";
+
 import "./DashboardPage.css";
-
-
-const getStoredUser = () => {
-    try {
-        const storedUser =
-            localStorage.getItem(
-                "meditrack_user"
-            );
-
-        if (!storedUser) {
-            return null;
-        }
-
-        return JSON.parse(
-            storedUser
-        );
-    }
-
-    catch {
-        return null;
-    }
-};
 
 
 const normalizeList = (
@@ -140,10 +121,8 @@ function DashboardPage() {
         useNavigate();
 
 
-    const [user] =
-        useState(
-            getStoredUser
-        );
+    const user =
+        useCurrentUser();
 
 
     const [

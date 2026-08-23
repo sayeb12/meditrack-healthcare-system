@@ -14,6 +14,9 @@ import {
     getRefreshToken,
 } from "../api/client";
 
+import useCurrentUser
+    from "../hooks/useCurrentUser";
+
 import {
     isValidBDPhone,
     isValidEmail,
@@ -32,28 +35,6 @@ const EMPTY_FORM = {
     address: "",
     blood_group: "",
     medical_notes: "",
-};
-
-
-const getStoredUser = () => {
-    try {
-        const storedUser =
-            localStorage.getItem(
-                "meditrack_user"
-            );
-
-        if (!storedUser) {
-            return null;
-        }
-
-        return JSON.parse(
-            storedUser
-        );
-    }
-
-    catch {
-        return null;
-    }
 };
 
 
@@ -120,10 +101,8 @@ function PatientsPage() {
         useNavigate();
 
 
-    const [user] =
-        useState(
-            getStoredUser
-        );
+    const user =
+        useCurrentUser();
 
 
     const [

@@ -13,6 +13,11 @@ const USER_KEY =
     "meditrack_user";
 
 
+let currentUserRequest = null;
+
+let currentUserAccessToken = null;
+
+
 export const getAccessToken = () => {
     return localStorage.getItem(
         ACCESS_TOKEN_KEY
@@ -27,7 +32,53 @@ export const getRefreshToken = () => {
 };
 
 
+export const getStoredUser = () => {
+    try {
+        const storedUser =
+            localStorage.getItem(
+                USER_KEY
+            );
+
+        if (!storedUser) {
+            return null;
+        }
+
+        return JSON.parse(storedUser);
+    }
+
+    catch {
+        return null;
+    }
+};
+
+
+const storeCurrentUser = (
+    user
+) => {
+    const currentUser = {
+        id: user.id,
+        full_name: user.full_name,
+        email: user.email,
+        phone_number: user.phone_number,
+        language: user.language,
+        is_staff: Boolean(
+            user.is_staff
+        ),
+    };
+
+    localStorage.setItem(
+        USER_KEY,
+        JSON.stringify(currentUser)
+    );
+
+    return currentUser;
+};
+
+
 export const clearAuthSession = () => {
+    currentUserRequest = null;
+    currentUserAccessToken = null;
+
     localStorage.removeItem(
         ACCESS_TOKEN_KEY
     );
@@ -324,4 +375,41 @@ export const apiRequest =
 
 
         return data;
+    };
+
+
+export const loadCurrentUser =
+    async () => {
+        const accessToken =
+            getAccessToken();
+
+        if (
+            !currentUserRequest ||
+            currentUserAccessToken !==
+                accessToken
+        ) {
+            currentUserAccessToken =
+                accessToken;
+
+            currentUserRequest =
+                apiRequest(
+                    "/auth/me/"
+                )
+                    .then((user) => {
+                        currentUserAccessToken =
+                            getAccessToken();
+
+                        return storeCurrentUser(
+                            user
+                        );
+                    })
+                    .catch((error) => {
+                        currentUserRequest =
+                            null;
+
+                        throw error;
+                    });
+        }
+
+        return currentUserRequest;
     };
