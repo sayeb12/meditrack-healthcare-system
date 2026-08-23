@@ -410,6 +410,7 @@ class CurrentUserView(APIView):
                 "email": user.email,
                 "phone_number": user.phone_number,
                 "language": user.language,
+                "is_staff": user.is_staff,
             },
             status=status.HTTP_200_OK
         )
