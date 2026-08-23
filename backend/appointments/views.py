@@ -6,7 +6,26 @@ from rest_framework.permissions import (
 )
 
 from .models import Appointment
-from .serializers import AppointmentSerializer
+from .serializers import (
+    AppointmentCreateSerializer,
+    AppointmentReadSerializer,
+    AppointmentUpdateSerializer,
+)
+
+
+class AppointmentSerializerSelectionMixin:
+
+    serializer_class = AppointmentReadSerializer
+
+    def get_serializer_class(self):
+
+        if self.request.method == "POST":
+            return AppointmentCreateSerializer
+
+        if self.request.method in {"PUT", "PATCH"}:
+            return AppointmentUpdateSerializer
+
+        return AppointmentReadSerializer
 
 
 class AppointmentAccessQuerysetMixin:
@@ -50,6 +69,9 @@ class AppointmentAccessQuerysetMixin:
         if self.request.method in SAFE_METHODS:
             return self.get_read_queryset()
 
+        if self.request.method in {"PUT", "PATCH"}:
+            return self.get_read_queryset()
+
         return self.get_base_queryset().filter(
             created_by=self.request.user
         )
@@ -57,14 +79,14 @@ class AppointmentAccessQuerysetMixin:
 
 class AppointmentListCreateView(
     AppointmentAccessQuerysetMixin,
+    AppointmentSerializerSelectionMixin,
     generics.ListCreateAPIView
 ):
-
-    serializer_class = AppointmentSerializer
 
     permission_classes = [
         IsAuthenticated
     ]
+
     def get_queryset(self):
 
         return (
@@ -88,10 +110,9 @@ class AppointmentListCreateView(
 
 class AppointmentRetrieveUpdateDeleteView(
     AppointmentAccessQuerysetMixin,
+    AppointmentSerializerSelectionMixin,
     generics.RetrieveUpdateDestroyAPIView
 ):
-
-    serializer_class = AppointmentSerializer
 
     permission_classes = [
         IsAuthenticated

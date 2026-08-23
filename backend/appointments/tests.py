@@ -334,7 +334,7 @@ class AppointmentReadAccessTests(TestCase):
             self.response_ids(response)
         )
 
-    def test_doctor_cannot_update_assigned_appointment(self):
+    def test_doctor_can_update_notes_on_assigned_appointment(self):
 
         self.authenticate(self.doctor_user)
 
@@ -344,23 +344,23 @@ class AppointmentReadAccessTests(TestCase):
                 args=[self.assigned_appointment.pk]
             ),
             {
-                "reason": "Doctor update attempt",
+                "consultation_notes": "Doctor clinical notes",
             },
             format="json",
         )
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_404_NOT_FOUND
+            status.HTTP_200_OK
         )
 
         self.assigned_appointment.refresh_from_db()
         self.assertEqual(
-            self.assigned_appointment.reason,
-            "Assigned appointment"
+            self.assigned_appointment.consultation_notes,
+            "Doctor clinical notes"
         )
 
-    def test_staff_cannot_update_appointment_they_did_not_create(self):
+    def test_staff_has_broader_update_access(self):
 
         self.authenticate(self.staff_doctor_user)
 
@@ -370,20 +370,25 @@ class AppointmentReadAccessTests(TestCase):
                 args=[self.creator_appointment.pk]
             ),
             {
-                "reason": "Staff update attempt",
+                "reason": "Staff updated reason",
+                "consultation_notes": "Staff clinical notes",
             },
             format="json",
         )
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_404_NOT_FOUND
+            status.HTTP_200_OK
         )
 
         self.creator_appointment.refresh_from_db()
         self.assertEqual(
             self.creator_appointment.reason,
-            "Creator appointment"
+            "Staff updated reason"
+        )
+        self.assertEqual(
+            self.creator_appointment.consultation_notes,
+            "Staff clinical notes"
         )
 
     def test_staff_cannot_delete_appointment_they_did_not_create(self):
@@ -406,3 +411,360 @@ class AppointmentReadAccessTests(TestCase):
                 pk=self.creator_appointment.pk
             ).exists()
         )
+
+    def test_get_preserves_read_serializer_response_fields(self):
+
+        self.authenticate(self.creator)
+
+        response = self.client.get(
+            reverse(
+                "appointment-detail",
+                args=[self.creator_appointment.pk]
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertEqual(
+            set(response.data.keys()),
+            {
+                "id",
+                "created_by",
+                "patient",
+                "patient_name",
+                "doctor",
+                "doctor_name",
+                "doctor_specialization",
+                "appointment_date",
+                "appointment_time",
+                "status",
+                "reason",
+                "consultation_notes",
+                "created_at",
+                "updated_at",
+            }
+        )
+        self.assertEqual(
+            response.data["created_by"],
+            self.creator.email
+        )
+        self.assertEqual(
+            response.data["patient_name"],
+            self.creator_patient.full_name
+        )
+
+    def test_create_still_works(self):
+
+        self.authenticate(self.creator)
+
+        response = self.client.post(
+            reverse("appointment-list-create"),
+            {
+                "patient": self.creator_patient.pk,
+                "doctor": self.doctor.pk,
+                "appointment_date": str(
+                    date.today() + timedelta(days=2)
+                ),
+                "appointment_time": "13:00",
+                "status": "scheduled",
+                "reason": "New appointment",
+                "consultation_notes": "",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED
+        )
+        self.assertEqual(
+            response.data["patient_name"],
+            self.creator_patient.full_name
+        )
+        self.assertEqual(
+            response.data["doctor_name"],
+            self.doctor_user.full_name
+        )
+
+    def test_created_by_remains_automatic(self):
+
+        self.authenticate(self.creator)
+
+        response = self.client.post(
+            reverse("appointment-list-create"),
+            {
+                "created_by": self.other_creator.email,
+                "patient": self.creator_patient.pk,
+                "doctor": self.doctor.pk,
+                "appointment_date": str(
+                    date.today() + timedelta(days=2)
+                ),
+                "appointment_time": "14:00",
+                "reason": "Automatic creator",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED
+        )
+
+        appointment = Appointment.objects.get(
+            pk=response.data["id"]
+        )
+
+        self.assertEqual(
+            appointment.created_by,
+            self.creator
+        )
+        self.assertEqual(
+            response.data["created_by"],
+            self.creator.email
+        )
+
+    def test_doctor_cannot_reassign_patient_or_doctor(self):
+
+        self.authenticate(self.doctor_user)
+
+        response = self.client.patch(
+            reverse(
+                "appointment-detail",
+                args=[self.assigned_appointment.pk]
+            ),
+            {
+                "patient": self.doctor_patient.pk,
+                "doctor": self.other_doctor.pk,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST
+        )
+        self.assertIn("patient", response.data)
+        self.assertIn("doctor", response.data)
+
+        self.assigned_appointment.refresh_from_db()
+        self.assertEqual(
+            self.assigned_appointment.patient,
+            self.other_patient
+        )
+        self.assertEqual(
+            self.assigned_appointment.doctor,
+            self.doctor
+        )
+
+    def test_creator_cannot_update_consultation_notes(self):
+
+        self.authenticate(self.creator)
+
+        response = self.client.patch(
+            reverse(
+                "appointment-detail",
+                args=[self.creator_appointment.pk]
+            ),
+            {
+                "consultation_notes": "Creator notes",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST
+        )
+        self.assertIn(
+            "consultation_notes",
+            response.data
+        )
+
+        self.creator_appointment.refresh_from_db()
+        self.assertEqual(
+            self.creator_appointment.consultation_notes,
+            ""
+        )
+
+    def test_creator_can_update_with_unchanged_protected_fields(self):
+
+        self.authenticate(self.creator)
+
+        response = self.client.patch(
+            reverse(
+                "appointment-detail",
+                args=[self.creator_appointment.pk]
+            ),
+            {
+                "reason": "Updated creator reason",
+                "status": self.creator_appointment.status,
+                "consultation_notes": (
+                    self.creator_appointment.consultation_notes
+                ),
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
+
+        self.creator_appointment.refresh_from_db()
+        self.assertEqual(
+            self.creator_appointment.reason,
+            "Updated creator reason"
+        )
+        self.assertEqual(
+            self.creator_appointment.status,
+            "scheduled"
+        )
+        self.assertEqual(
+            self.creator_appointment.consultation_notes,
+            ""
+        )
+
+    def test_staff_can_reassign_patient_and_doctor(self):
+
+        self.authenticate(self.staff_doctor_user)
+
+        response = self.client.patch(
+            reverse(
+                "appointment-detail",
+                args=[self.creator_appointment.pk]
+            ),
+            {
+                "patient": self.other_patient.pk,
+                "doctor": self.doctor.pk,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
+
+        self.creator_appointment.refresh_from_db()
+        self.assertEqual(
+            self.creator_appointment.patient,
+            self.other_patient
+        )
+        self.assertEqual(
+            self.creator_appointment.doctor,
+            self.doctor
+        )
+
+    def test_status_cannot_be_changed_through_patch(self):
+
+        self.authenticate(self.staff_doctor_user)
+
+        response = self.client.patch(
+            reverse(
+                "appointment-detail",
+                args=[self.creator_appointment.pk]
+            ),
+            {
+                "status": "completed",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST
+        )
+        self.assertIn("status", response.data)
+
+        self.creator_appointment.refresh_from_db()
+        self.assertEqual(
+            self.creator_appointment.status,
+            "scheduled"
+        )
+
+    def test_archived_doctor_cannot_be_selected(self):
+
+        self.other_doctor.is_archived = True
+        self.other_doctor.save(
+            update_fields=["is_archived"]
+        )
+        self.authenticate(self.creator)
+
+        response = self.client.post(
+            reverse("appointment-list-create"),
+            {
+                "patient": self.creator_patient.pk,
+                "doctor": self.other_doctor.pk,
+                "appointment_date": str(
+                    date.today() + timedelta(days=2)
+                ),
+                "appointment_time": "15:00",
+                "reason": "Archived doctor appointment",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST
+        )
+        self.assertIn("doctor", response.data)
+
+    def test_inactive_or_unavailable_doctor_cannot_be_selected(self):
+
+        self.authenticate(self.creator)
+
+        cases = [
+            (
+                "inactive",
+                {
+                    "user_active": False,
+                    "doctor_available": True,
+                },
+            ),
+            (
+                "unavailable",
+                {
+                    "user_active": True,
+                    "doctor_available": False,
+                },
+            ),
+        ]
+
+        for label, doctor_state in cases:
+            with self.subTest(label=label):
+                self.other_doctor_user.is_active = (
+                    doctor_state["user_active"]
+                )
+                self.other_doctor_user.save(
+                    update_fields=["is_active"]
+                )
+
+                self.other_doctor.is_available = (
+                    doctor_state["doctor_available"]
+                )
+                self.other_doctor.save(
+                    update_fields=["is_available"]
+                )
+
+                response = self.client.post(
+                    reverse("appointment-list-create"),
+                    {
+                        "patient": self.creator_patient.pk,
+                        "doctor": self.other_doctor.pk,
+                        "appointment_date": str(
+                            date.today() + timedelta(days=2)
+                        ),
+                        "appointment_time": "16:00",
+                        "reason": f"{label} doctor appointment",
+                    },
+                    format="json",
+                )
+
+                self.assertEqual(
+                    response.status_code,
+                    status.HTTP_400_BAD_REQUEST
+                )
+                self.assertIn("doctor", response.data)
