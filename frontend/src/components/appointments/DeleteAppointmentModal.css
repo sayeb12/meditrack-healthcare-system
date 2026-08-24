@@ -1,0 +1,216 @@
+.delete-appointment-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 210;
+
+    padding: 22px;
+
+    display: grid;
+    place-items: center;
+
+    overflow-y: auto;
+
+    background: rgba(15, 25, 39, 0.58);
+    backdrop-filter: blur(4px);
+}
+
+.delete-appointment-dialog {
+    position: relative;
+
+    width: min(440px, 100%);
+    max-height: calc(100dvh - 44px);
+
+    padding: 30px;
+    overflow-y: auto;
+
+    border-radius: 20px;
+
+    background: #ffffff;
+    text-align: center;
+    box-shadow:
+        0 25px 80px
+        rgba(14, 27, 48, 0.25);
+}
+
+.delete-appointment-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+
+    width: 34px;
+    height: 34px;
+
+    border: 0;
+    border-radius: 10px;
+
+    background: #f1f4f7;
+    color: #657184;
+
+    cursor: pointer;
+    font-size: 21px;
+}
+
+.delete-appointment-icon {
+    width: 58px;
+    height: 58px;
+
+    margin: 0 auto 15px;
+
+    border-radius: 50%;
+
+    display: grid;
+    place-items: center;
+
+    background: #fff0f0;
+    color: #c34c4c;
+
+    font-size: 23px;
+    font-weight: 900;
+}
+
+.delete-appointment-dialog h2 {
+    color: #172033;
+    font-size: 20px;
+}
+
+.delete-appointment-dialog > p {
+    margin-top: 9px;
+
+    color: #7c8797;
+
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.delete-appointment-summary {
+    margin-top: 17px;
+    padding: 14px;
+
+    border: 1px solid #f0dddd;
+    border-radius: 12px;
+
+    background: #fffafa;
+}
+
+.delete-appointment-summary strong,
+.delete-appointment-summary span,
+.delete-appointment-summary small {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+.delete-appointment-summary strong {
+    color: #394457;
+    font-size: 13px;
+}
+
+.delete-appointment-summary span {
+    margin-top: 3px;
+
+    color: #747f90;
+    font-size: 10px;
+}
+
+.delete-appointment-summary small {
+    margin-top: 7px;
+
+    color: #929baa;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.delete-appointment-error {
+    margin-top: 15px;
+    padding: 11px 13px;
+
+    border: 1px solid #f0caca;
+    border-radius: 10px;
+
+    background: #fff5f5;
+    color: #ad3d3d;
+
+    font-size: 10px;
+    line-height: 1.5;
+    text-align: left;
+}
+
+.delete-appointment-actions {
+    margin-top: 21px;
+
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.delete-appointment-cancel,
+.delete-appointment-confirm {
+    min-height: 42px;
+    padding: 9px 17px;
+
+    border-radius: 10px;
+
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.delete-appointment-cancel {
+    border: 1px solid #dfe5eb;
+    background: #ffffff;
+    color: #667184;
+}
+
+.delete-appointment-confirm {
+    border: 0;
+    background: linear-gradient(135deg, #a94444, #c85a5a);
+    color: #ffffff;
+}
+
+.delete-appointment-close:disabled,
+.delete-appointment-cancel:disabled,
+.delete-appointment-confirm:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.delete-appointment-close:focus-visible,
+.delete-appointment-cancel:focus-visible,
+.delete-appointment-confirm:focus-visible {
+    outline: 3px solid rgba(185, 74, 74, 0.22);
+    outline-offset: 2px;
+}
+
+@media (max-width: 700px) {
+    .delete-appointment-modal-backdrop {
+        padding: 12px;
+    }
+
+    .delete-appointment-dialog {
+        max-height: calc(100dvh - 24px);
+        padding: 28px 22px 22px;
+        border-radius: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .delete-appointment-modal-backdrop {
+        padding: 8px;
+        align-items: end;
+    }
+
+    .delete-appointment-dialog {
+        width: 100%;
+        max-height: calc(100dvh - 16px);
+
+        padding: 28px 18px 18px;
+
+        border-radius: 16px 16px 12px 12px;
+    }
+
+    .delete-appointment-actions {
+        flex-direction: column-reverse;
+    }
+
+    .delete-appointment-actions button {
+        width: 100%;
+    }
+}

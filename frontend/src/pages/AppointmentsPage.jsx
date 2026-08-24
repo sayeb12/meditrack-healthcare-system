@@ -29,6 +29,9 @@ import AppointmentFormModal
 import AppointmentLifecycleModal
     from "../components/appointments/AppointmentLifecycleModal";
 
+import DeleteAppointmentModal
+    from "../components/appointments/DeleteAppointmentModal";
+
 import "./DashboardPage.css";
 import "./AppointmentsPage.css";
 
@@ -376,6 +379,12 @@ function AppointmentsPage() {
 
 
     const [
+        deleteError,
+        setDeleteError,
+    ] = useState("");
+
+
+    const [
         lifecycleAppointment,
         setLifecycleAppointment,
     ] = useState(null);
@@ -668,6 +677,7 @@ function AppointmentsPage() {
 
         if (action === "delete") {
             setSelectedAppointment(null);
+            setDeleteError("");
             setAppointmentToDelete(
                 appointment
             );
@@ -754,6 +764,16 @@ function AppointmentsPage() {
     };
 
 
+    const closeDeleteModal = () => {
+        if (deleting) {
+            return;
+        }
+
+        setAppointmentToDelete(null);
+        setDeleteError("");
+    };
+
+
     const handleDelete =
         async () => {
             if (
@@ -766,6 +786,7 @@ function AppointmentsPage() {
             setDeleting(true);
 
             setError("");
+            setDeleteError("");
             setSuccessMessage("");
 
 
@@ -790,6 +811,8 @@ function AppointmentsPage() {
                 setAppointmentToDelete(
                     null
                 );
+
+                setDeleteError("");
             }
 
             catch (
@@ -804,7 +827,7 @@ function AppointmentsPage() {
                 }
 
 
-                setError(
+                setDeleteError(
                     requestError.message ||
                     "Unable to delete appointment."
                 );
@@ -1741,99 +1764,16 @@ function AppointmentsPage() {
             />
 
 
-            {appointmentToDelete && (
-
-                <div
-                    className="appointment-modal-backdrop"
-                    onMouseDown={() => {
-                        if (
-                            !deleting
-                        ) {
-                            setAppointmentToDelete(
-                                null
-                            );
-                        }
-                    }}
-                >
-
-                    <div
-                        className="appointment-modal appointment-delete-modal"
-                        onMouseDown={
-                            (
-                                event
-                            ) =>
-                                event.stopPropagation()
-                        }
-                    >
-
-                        <div className="appointment-delete-icon">
-                            !
-                        </div>
-
-
-                        <h2>
-                            Permanently Delete Appointment?
-                        </h2>
-
-
-                        <p>
-                            Are you sure you want to
-                            permanently delete the appointment for{" "}
-
-                            <strong>
-                                {
-                                    appointmentToDelete.patient_name
-                                }
-                            </strong>
-
-                            ? This action cannot be undone.
-                            Use Cancel Appointment instead
-                            when the record should be preserved.
-                        </p>
-
-
-                        <div className="appointment-delete-actions">
-
-                            <button
-                                type="button"
-                                className="appointment-cancel-button"
-                                disabled={
-                                    deleting
-                                }
-                                onClick={() =>
-                                    setAppointmentToDelete(
-                                        null
-                                    )
-                                }
-                            >
-                                Cancel
-                            </button>
-
-
-                            <button
-                                type="button"
-                                className="appointment-confirm-delete"
-                                disabled={
-                                    deleting
-                                }
-                                onClick={
-                                    handleDelete
-                                }
-                            >
-                                {
-                                    deleting
-                                        ? "Deleting..."
-                                        : "Permanently Delete"
-                                }
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            )}
+            <DeleteAppointmentModal
+                isOpen={Boolean(
+                    appointmentToDelete
+                )}
+                appointment={appointmentToDelete}
+                onClose={closeDeleteModal}
+                onDeleteConfirmed={handleDelete}
+                loading={deleting}
+                error={deleteError}
+            />
 
 
             <AppointmentLifecycleModal
