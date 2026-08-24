@@ -17,19 +17,20 @@ import {
 import useCurrentUser
     from "../hooks/useCurrentUser";
 
+import AppointmentActionButtons
+    from "../components/appointments/AppointmentActionButtons";
+
+import AppointmentDetailsModal
+    from "../components/appointments/AppointmentDetailsModal";
+
+import AppointmentFormModal
+    from "../components/appointments/AppointmentFormModal";
+
+import AppointmentLifecycleModal
+    from "../components/appointments/AppointmentLifecycleModal";
+
 import "./DashboardPage.css";
 import "./AppointmentsPage.css";
-
-
-const EMPTY_FORM = {
-    patient: "",
-    doctor: "",
-    appointment_date: "",
-    appointment_time: "",
-    status: "scheduled",
-    reason: "",
-    consultation_notes: "",
-};
 
 
 const normalizeList = (data) => {
@@ -47,6 +48,165 @@ const normalizeList = (data) => {
 
     return [];
 };
+
+
+const normalizeEmail = (value) => {
+    if (typeof value !== "string") {
+        return "";
+    }
+
+    return value.trim().toLowerCase();
+};
+
+
+const normalizeId = (value) => {
+    if (
+        value === null ||
+        value === undefined ||
+        value === ""
+    ) {
+        return "";
+    }
+
+    return String(value);
+};
+
+
+const isCreatedByUser = (
+    createdBy,
+    user
+) => {
+    if (!createdBy || !user) {
+        return false;
+    }
+
+    if (typeof createdBy === "object") {
+        const creatorId =
+            normalizeId(createdBy.id);
+
+        const userId =
+            normalizeId(user.id);
+
+        if (
+            creatorId &&
+            userId &&
+            creatorId === userId
+        ) {
+            return true;
+        }
+
+        const creatorEmail =
+            normalizeEmail(
+                createdBy.email
+            );
+
+        const userEmail =
+            normalizeEmail(user.email);
+
+        return Boolean(
+            creatorEmail &&
+            userEmail &&
+            creatorEmail === userEmail
+        );
+    }
+
+    if (typeof createdBy === "number") {
+        const creatorId =
+            normalizeId(createdBy);
+
+        const userId =
+            normalizeId(user.id);
+
+        return Boolean(
+            creatorId &&
+            userId &&
+            creatorId === userId
+        );
+    }
+
+    const creatorEmail =
+        normalizeEmail(createdBy);
+
+    const userEmail =
+        normalizeEmail(user.email);
+
+    return Boolean(
+        creatorEmail &&
+        userEmail &&
+        creatorEmail === userEmail
+    );
+};
+
+
+function AppointmentCrudButtons({
+    appointment,
+    user,
+    onAction,
+}) {
+    if (!appointment || !user) {
+        return null;
+    }
+
+    const creator =
+        isCreatedByUser(
+            appointment.created_by,
+            user
+        );
+
+    const canEdit =
+        user.is_staff === true ||
+        creator;
+
+    const canDelete = creator;
+
+    if (!canEdit && !canDelete) {
+        return null;
+    }
+
+    const patientName =
+        appointment.patient_name ||
+        "this patient";
+
+    return (
+        <div className="appointment-crud-buttons">
+            {canEdit && (
+                <button
+                    type="button"
+                    className="appointment-crud-edit"
+                    onClick={() =>
+                        onAction(
+                            "edit",
+                            appointment
+                        )
+                    }
+                    aria-label={
+                        `Edit appointment for ${patientName}`
+                    }
+                >
+                    Edit
+                </button>
+            )}
+
+            {canDelete && (
+                <button
+                    type="button"
+                    className="appointment-crud-delete"
+                    onClick={() =>
+                        onAction(
+                            "delete",
+                            appointment
+                        )
+                    }
+                    aria-label={
+                        `Permanently delete appointment for ${patientName}`
+                    }
+                >
+                    Delete
+                </button>
+            )}
+        </div>
+    );
+}
 
 
 const formatDate = (
@@ -104,38 +264,12 @@ const formatTime = (
 };
 
 
-const getTodayString = () => {
-    const now =
-        new Date();
-
-    const year =
-        now.getFullYear();
-
-    const month =
-        String(
-            now.getMonth() + 1
-        ).padStart(
-            2,
-            "0"
-        );
-
-    const day =
-        String(
-            now.getDate()
-        ).padStart(
-            2,
-            "0"
-        );
-
-    return `${year}-${month}-${day}`;
-};
-
-
 const getStatusLabel = (
     status
 ) => {
     const labels = {
         scheduled: "Scheduled",
+        confirmed: "Confirmed",
         completed: "Completed",
         cancelled: "Cancelled",
         no_show: "No Show",
@@ -224,26 +358,6 @@ function AppointmentsPage() {
 
 
     const [
-        formData,
-        setFormData,
-    ] = useState({
-        ...EMPTY_FORM,
-    });
-
-
-    const [
-        formError,
-        setFormError,
-    ] = useState("");
-
-
-    const [
-        saving,
-        setSaving,
-    ] = useState(false);
-
-
-    const [
         selectedAppointment,
         setSelectedAppointment,
     ] = useState(null);
@@ -259,6 +373,18 @@ function AppointmentsPage() {
         deleting,
         setDeleting,
     ] = useState(false);
+
+
+    const [
+        lifecycleAppointment,
+        setLifecycleAppointment,
+    ] = useState(null);
+
+
+    const [
+        lifecycleAction,
+        setLifecycleAction,
+    ] = useState(null);
 
 
     const handleSessionError = (
@@ -282,6 +408,47 @@ function AppointmentsPage() {
 
         return false;
     };
+
+
+    const loadAppointments =
+        async () => {
+            setLoading(true);
+            setError("");
+
+            try {
+                const appointmentData =
+                    await apiRequest(
+                        "/appointments/"
+                    );
+
+                setAppointments(
+                    normalizeList(
+                        appointmentData
+                    )
+                );
+            }
+
+            catch (
+                requestError
+            ) {
+                if (
+                    handleSessionError(
+                        requestError
+                    )
+                ) {
+                    return;
+                }
+
+                setError(
+                    requestError.message ||
+                    "Unable to load appointments."
+                );
+            }
+
+            finally {
+                setLoading(false);
+            }
+        };
 
 
     const loadData =
@@ -435,6 +602,20 @@ function AppointmentsPage() {
         );
 
 
+    const canCreateAppointment =
+        useMemo(
+            () =>
+                patients.some(
+                    (patient) =>
+                        isCreatedByUser(
+                            patient.created_by,
+                            user
+                        )
+                ),
+            [patients, user]
+        );
+
+
     const closeMobileMenu =
         () => {
             setMobileMenuOpen(
@@ -458,12 +639,6 @@ function AppointmentsPage() {
                 null
             );
 
-            setFormData({
-                ...EMPTY_FORM,
-            });
-
-            setFormError("");
-
             setFormOpen(true);
         };
 
@@ -475,279 +650,108 @@ function AppointmentsPage() {
             appointment
         );
 
-        setFormData({
-            patient:
-                String(
-                    appointment.patient ||
-                    ""
-                ),
-
-            doctor:
-                String(
-                    appointment.doctor ||
-                    ""
-                ),
-
-            appointment_date:
-                appointment.appointment_date ||
-                "",
-
-            appointment_time:
-                appointment.appointment_time
-                    ?.slice(
-                        0,
-                        5
-                    ) ||
-                "",
-
-            status:
-                appointment.status ||
-                "scheduled",
-
-            reason:
-                appointment.reason ||
-                "",
-
-            consultation_notes:
-                appointment.consultation_notes ||
-                "",
-        });
-
-        setFormError("");
-
         setFormOpen(true);
     };
 
 
-    const closeForm =
-        () => {
-            if (saving) {
-                return;
-            }
-
-            setFormOpen(false);
-
-            setEditingAppointment(
-                null
-            );
-
-            setFormData({
-                ...EMPTY_FORM,
-            });
-
-            setFormError("");
-        };
-
-
-    const handleFormChange = (
-        event
+    const handleAppointmentAction = (
+        action,
+        appointment
     ) => {
-        const {
-            name,
-            value,
-        } = event.target;
+        setSuccessMessage("");
 
-        setFormData(
-            (current) => ({
-                ...current,
-                [name]: value,
-            })
+        if (action === "edit") {
+            setSelectedAppointment(null);
+            openEditForm(appointment);
+            return;
+        }
+
+        if (action === "delete") {
+            setSelectedAppointment(null);
+            setAppointmentToDelete(
+                appointment
+            );
+            return;
+        }
+
+        setSelectedAppointment(null);
+        setLifecycleAppointment(
+            appointment
         );
+        setLifecycleAction(action);
     };
 
 
-    const validateForm =
-        () => {
-            if (!formData.patient) {
-                return (
-                    "Please select a patient."
+    const closeLifecycleModal = () => {
+        setLifecycleAppointment(null);
+        setLifecycleAction(null);
+    };
+
+
+    const handleAppointmentChanged = async () => {
+        closeLifecycleModal();
+
+        setSuccessMessage(
+            "Appointment updated successfully."
+        );
+
+        await loadAppointments();
+    };
+
+
+    const closeForm = () => {
+        setFormOpen(false);
+        setEditingAppointment(null);
+    };
+
+
+    const handleAppointmentSaved = async (
+        payload,
+        mode,
+        appointment
+    ) => {
+        setSuccessMessage("");
+
+        try {
+            if (mode === "edit") {
+                await apiRequest(
+                    `/appointments/${appointment.id}/`,
+                    {
+                        method: "PATCH",
+                        body: payload,
+                    }
+                );
+
+                setSuccessMessage(
+                    "Appointment updated successfully."
                 );
             }
 
+            else {
+                await apiRequest(
+                    "/appointments/",
+                    {
+                        method: "POST",
+                        body: payload,
+                    }
+                );
 
-            if (!formData.doctor) {
-                return (
-                    "Please select a doctor."
+                setSuccessMessage(
+                    "Appointment created successfully."
                 );
             }
 
+            await loadAppointments();
+        }
 
-            if (
-                !formData.appointment_date
-            ) {
-                return (
-                    "Appointment date is required."
-                );
-            }
-
-
-            if (
-                !formData.appointment_time
-            ) {
-                return (
-                    "Appointment time is required."
-                );
-            }
-
-
-            if (
-                !editingAppointment &&
-                formData.appointment_date <
-                getTodayString()
-            ) {
-                return (
-                    "Appointment date cannot be in the past."
-                );
-            }
-
-
-            if (
-                !formData.reason.trim()
-            ) {
-                return (
-                    "Please enter the reason for the appointment."
-                );
-            }
-
-
-            return "";
-        };
-
-
-    const handleSubmit =
-        async (
-            event
-        ) => {
-            event.preventDefault();
-
-            setFormError("");
-            setSuccessMessage("");
-
-
-            const validationError =
-                validateForm();
-
-
-            if (
-                validationError
-            ) {
-                setFormError(
-                    validationError
-                );
-
-                return;
-            }
-
-
-            setSaving(true);
-
-
-            const payload = {
-                patient:
-                    Number(
-                        formData.patient
-                    ),
-
-                doctor:
-                    Number(
-                        formData.doctor
-                    ),
-
-                appointment_date:
-                    formData.appointment_date,
-
-                appointment_time:
-                    formData.appointment_time,
-
-                status:
-                    formData.status,
-
-                reason:
-                    formData.reason.trim(),
-
-                consultation_notes:
-                    formData
-                        .consultation_notes
-                        .trim(),
-            };
-
-
-            try {
-                if (
-                    editingAppointment
-                ) {
-                    await apiRequest(
-                        `/appointments/${editingAppointment.id}/`,
-                        {
-                            method:
-                                "PATCH",
-
-                            body:
-                                payload,
-                        }
-                    );
-
-
-                    setSuccessMessage(
-                        "Appointment updated successfully."
-                    );
-                }
-
-                else {
-                    await apiRequest(
-                        "/appointments/",
-                        {
-                            method:
-                                "POST",
-
-                            body:
-                                payload,
-                        }
-                    );
-
-
-                    setSuccessMessage(
-                        "Appointment created successfully."
-                    );
-                }
-
-
-                setFormOpen(false);
-
-                setEditingAppointment(
-                    null
-                );
-
-                setFormData({
-                    ...EMPTY_FORM,
-                });
-
-
-                await loadData();
-            }
-
-            catch (
+        catch (requestError) {
+            handleSessionError(
                 requestError
-            ) {
-                if (
-                    handleSessionError(
-                        requestError
-                    )
-                ) {
-                    return;
-                }
+            );
 
-
-                setFormError(
-                    requestError.message ||
-                    "Unable to save appointment."
-                );
-            }
-
-            finally {
-                setSaving(false);
-            }
-        };
+            throw requestError;
+        }
+    };
 
 
     const handleDelete =
@@ -775,16 +779,7 @@ function AppointmentsPage() {
                 );
 
 
-                setAppointments(
-                    (current) =>
-                        current.filter(
-                            (
-                                appointment
-                            ) =>
-                                appointment.id !==
-                                appointmentToDelete.id
-                        )
-                );
+                await loadAppointments();
 
 
                 setSuccessMessage(
@@ -1154,19 +1149,21 @@ function AppointmentsPage() {
                         </div>
 
 
-                        <button
-                            type="button"
-                            className="add-appointment-button"
-                            onClick={
-                                openCreateForm
-                            }
-                        >
-                            <span>
-                                +
-                            </span>
+                        {canCreateAppointment && (
+                            <button
+                                type="button"
+                                className="add-appointment-button"
+                                onClick={
+                                    openCreateForm
+                                }
+                            >
+                                <span>
+                                    +
+                                </span>
 
-                            New Appointment
-                        </button>
+                                New Appointment
+                            </button>
+                        )}
 
                     </div>
 
@@ -1240,6 +1237,10 @@ function AppointmentsPage() {
 
                             <option value="scheduled">
                                 Scheduled
+                            </option>
+
+                            <option value="confirmed">
+                                Confirmed
                             </option>
 
                             <option value="completed">
@@ -1322,6 +1323,7 @@ function AppointmentsPage() {
                                         </p>
 
                                         {
+                                            canCreateAppointment &&
                                             !searchTerm &&
                                             statusFilter ===
                                             "all" &&
@@ -1506,30 +1508,19 @@ function AppointmentsPage() {
                                                                             </button>
 
 
-                                                                            <button
-                                                                                type="button"
-                                                                                className="appointment-edit-action"
-                                                                                onClick={() =>
-                                                                                    openEditForm(
-                                                                                        appointment
-                                                                                    )
-                                                                                }
-                                                                            >
-                                                                                Edit
-                                                                            </button>
+                                                                            <AppointmentActionButtons
+                                                                                appointment={appointment}
+                                                                                user={user}
+                                                                                doctors={doctors}
+                                                                                onAction={handleAppointmentAction}
+                                                                            />
 
 
-                                                                            <button
-                                                                                type="button"
-                                                                                className="appointment-delete-action"
-                                                                                onClick={() =>
-                                                                                    setAppointmentToDelete(
-                                                                                        appointment
-                                                                                    )
-                                                                                }
-                                                                            >
-                                                                                Delete
-                                                                            </button>
+                                                                            <AppointmentCrudButtons
+                                                                                appointment={appointment}
+                                                                                user={user}
+                                                                                onAction={handleAppointmentAction}
+                                                                            />
 
                                                                         </div>
 
@@ -1680,30 +1671,19 @@ function AppointmentsPage() {
                                                                 </button>
 
 
-                                                                <button
-                                                                    type="button"
-                                                                    className="appointment-edit-action"
-                                                                    onClick={() =>
-                                                                        openEditForm(
-                                                                            appointment
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Edit
-                                                                </button>
+                                                                <AppointmentActionButtons
+                                                                    appointment={appointment}
+                                                                    user={user}
+                                                                    doctors={doctors}
+                                                                    onAction={handleAppointmentAction}
+                                                                />
 
 
-                                                                <button
-                                                                    type="button"
-                                                                    className="appointment-delete-action"
-                                                                    onClick={() =>
-                                                                        setAppointmentToDelete(
-                                                                            appointment
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Delete
-                                                                </button>
+                                                                <AppointmentCrudButtons
+                                                                    appointment={appointment}
+                                                                    user={user}
+                                                                    onAction={handleAppointmentAction}
+                                                                />
 
                                                             </div>
 
@@ -1723,638 +1703,42 @@ function AppointmentsPage() {
             </main>
 
 
-            {formOpen && (
-
-                <div
-                    className="appointment-modal-backdrop"
-                    onMouseDown={
-                        closeForm
-                    }
-                >
-
-                    <div
-                        className="appointment-modal appointment-form-modal"
-                        onMouseDown={
-                            (
-                                event
-                            ) =>
-                                event.stopPropagation()
-                        }
-                    >
-
-                        <div className="appointment-modal-header">
-
-                            <div>
-
-                                <span>
-                                    {
-                                        editingAppointment
-                                            ? "Update Schedule"
-                                            : "New Schedule"
-                                    }
-                                </span>
-
-                                <h2>
-                                    {
-                                        editingAppointment
-                                            ? "Edit Appointment"
-                                            : "Create Appointment"
-                                    }
-                                </h2>
-
-                            </div>
-
-
-                            <button
-                                type="button"
-                                className="appointment-modal-close"
-                                onClick={
-                                    closeForm
-                                }
-                                aria-label="Close"
-                            >
-                                ×
-                            </button>
-
-                        </div>
-
-
-                        <form
-                            className="appointment-form"
-                            onSubmit={
-                                handleSubmit
-                            }
-                        >
-
-                            <div className="appointment-form-grid">
-
-                                <div className="appointment-form-group">
-
-                                    <label>
-                                        Patient
-                                        <span>
-                                            *
-                                        </span>
-                                    </label>
-
-
-                                    <select
-                                        name="patient"
-                                        value={
-                                            formData.patient
-                                        }
-                                        onChange={
-                                            handleFormChange
-                                        }
-                                    >
-                                        <option value="">
-                                            Select patient
-                                        </option>
-
-                                        {
-                                            patients.map(
-                                                (
-                                                    patient
-                                                ) => (
-                                                    <option
-                                                        key={
-                                                            patient.id
-                                                        }
-                                                        value={
-                                                            patient.id
-                                                        }
-                                                    >
-                                                        {
-                                                            patient.full_name
-                                                        }
-                                                    </option>
-                                                )
-                                            )
-                                        }
-                                    </select>
-
-                                </div>
-
-
-                                <div className="appointment-form-group">
-
-                                    <label>
-                                        Doctor
-                                        <span>
-                                            *
-                                        </span>
-                                    </label>
-
-
-                                    <select
-                                        name="doctor"
-                                        value={
-                                            formData.doctor
-                                        }
-                                        onChange={
-                                            handleFormChange
-                                        }
-                                    >
-                                        <option value="">
-                                            Select doctor
-                                        </option>
-
-                                        {
-                                            doctors.map(
-                                                (
-                                                    doctor
-                                                ) => (
-                                                    <option
-                                                        key={
-                                                            doctor.id
-                                                        }
-                                                        value={
-                                                            doctor.id
-                                                        }
-                                                        disabled={
-                                                            !doctor.is_available &&
-                                                            String(
-                                                                doctor.id
-                                                            ) !==
-                                                            String(
-                                                                formData.doctor
-                                                            )
-                                                        }
-                                                    >
-                                                        {
-                                                            doctor.full_name
-                                                        }
-                                                        {" - "}
-                                                        {
-                                                            doctor.specialization
-                                                        }
-                                                        {
-                                                            !doctor.is_available
-                                                                ? " (Unavailable)"
-                                                                : ""
-                                                        }
-                                                    </option>
-                                                )
-                                            )
-                                        }
-                                    </select>
-
-                                </div>
-
-
-                                <div className="appointment-form-group">
-
-                                    <label>
-                                        Date
-                                        <span>
-                                            *
-                                        </span>
-                                    </label>
-
-
-                                    <input
-                                        type="date"
-                                        name="appointment_date"
-                                        value={
-                                            formData.appointment_date
-                                        }
-                                        min={
-                                            editingAppointment
-                                                ? undefined
-                                                : getTodayString()
-                                        }
-                                        onChange={
-                                            handleFormChange
-                                        }
-                                    />
-
-                                </div>
-
-
-                                <div className="appointment-form-group">
-
-                                    <label>
-                                        Time
-                                        <span>
-                                            *
-                                        </span>
-                                    </label>
-
-
-                                    <input
-                                        type="time"
-                                        name="appointment_time"
-                                        value={
-                                            formData.appointment_time
-                                        }
-                                        onChange={
-                                            handleFormChange
-                                        }
-                                    />
-
-                                </div>
-
-
-                                <div className="appointment-form-group appointment-form-full">
-
-                                    <label>
-                                        Status
-                                    </label>
-
-
-                                    <select
-                                        name="status"
-                                        value={
-                                            formData.status
-                                        }
-                                        onChange={
-                                            handleFormChange
-                                        }
-                                    >
-                                        <option value="scheduled">
-                                            Scheduled
-                                        </option>
-
-                                        <option value="completed">
-                                            Completed
-                                        </option>
-
-                                        <option value="cancelled">
-                                            Cancelled
-                                        </option>
-
-                                        <option value="no_show">
-                                            No Show
-                                        </option>
-                                    </select>
-
-                                </div>
-
-
-                                <div className="appointment-form-group appointment-form-full">
-
-                                    <label>
-                                        Reason
-                                        <span>
-                                            *
-                                        </span>
-                                    </label>
-
-
-                                    <textarea
-                                        name="reason"
-                                        value={
-                                            formData.reason
-                                        }
-                                        onChange={
-                                            handleFormChange
-                                        }
-                                        rows="3"
-                                        placeholder="Reason for appointment"
-                                    />
-
-                                </div>
-
-
-                                <div className="appointment-form-group appointment-form-full">
-
-                                    <label>
-                                        Consultation Notes
-                                    </label>
-
-
-                                    <textarea
-                                        name="consultation_notes"
-                                        value={
-                                            formData.consultation_notes
-                                        }
-                                        onChange={
-                                            handleFormChange
-                                        }
-                                        rows="4"
-                                        placeholder="Optional consultation notes"
-                                    />
-
-                                </div>
-
-                            </div>
-
-
-                            {formError && (
-                                <div className="appointment-form-error">
-                                    {formError}
-                                </div>
-                            )}
-
-
-                            <div className="appointment-form-actions">
-
-                                <button
-                                    type="button"
-                                    className="appointment-cancel-button"
-                                    onClick={
-                                        closeForm
-                                    }
-                                    disabled={
-                                        saving
-                                    }
-                                >
-                                    Cancel
-                                </button>
-
-
-                                <button
-                                    type="submit"
-                                    className="appointment-save-button"
-                                    disabled={
-                                        saving
-                                    }
-                                >
-                                    {
-                                        saving
-                                            ? "Saving..."
-                                            :
-                                            editingAppointment
-                                                ? "Update Appointment"
-                                                : "Create Appointment"
-                                    }
-                                </button>
-
-                            </div>
-
-                        </form>
-
-                    </div>
-
-                </div>
-
-            )}
-
-
-            {selectedAppointment && (
-
-                <div
-                    className="appointment-modal-backdrop"
-                    onMouseDown={() =>
-                        setSelectedAppointment(
-                            null
-                        )
-                    }
-                >
-
-                    <div
-                        className="appointment-modal appointment-details-modal"
-                        onMouseDown={
-                            (
-                                event
-                            ) =>
-                                event.stopPropagation()
-                        }
-                    >
-
-                        <div className="appointment-modal-header">
-
-                            <div>
-
-                                <span>
-                                    Appointment Record
-                                </span>
-
-                                <h2>
-                                    Appointment Details
-                                </h2>
-
-                            </div>
-
-
-                            <button
-                                type="button"
-                                className="appointment-modal-close"
-                                onClick={() =>
-                                    setSelectedAppointment(
-                                        null
-                                    )
-                                }
-                            >
-                                ×
-                            </button>
-
-                        </div>
-
-
-                        <div className="appointment-details-heading">
-
-                            <div className="appointment-details-icon">
-                                A
-                            </div>
-
-
-                            <div>
-
-                                <h3>
-                                    {
-                                        selectedAppointment.patient_name
-                                    }
-                                </h3>
-
-                                <p>
-                                    with{" "}
-                                    {
-                                        selectedAppointment.doctor_name
-                                    }
-                                </p>
-
-                                <span
-                                    className={
-                                        `appointment-status-badge status-${selectedAppointment.status}`
-                                    }
-                                >
-                                    {
-                                        getStatusLabel(
-                                            selectedAppointment.status
-                                        )
-                                    }
-                                </span>
-
-                            </div>
-
-                        </div>
-
-
-                        <div className="appointment-details-grid">
-
-                            <div>
-
-                                <span>
-                                    Patient
-                                </span>
-
-                                <strong>
-                                    {
-                                        selectedAppointment.patient_name
-                                    }
-                                </strong>
-
-                            </div>
-
-
-                            <div>
-
-                                <span>
-                                    Doctor
-                                </span>
-
-                                <strong>
-                                    {
-                                        selectedAppointment.doctor_name
-                                    }
-                                </strong>
-
-                            </div>
-
-
-                            <div>
-
-                                <span>
-                                    Specialization
-                                </span>
-
-                                <strong>
-                                    {
-                                        selectedAppointment.doctor_specialization ||
-                                        "Not provided"
-                                    }
-                                </strong>
-
-                            </div>
-
-
-                            <div>
-
-                                <span>
-                                    Date
-                                </span>
-
-                                <strong>
-                                    {
-                                        formatDate(
-                                            selectedAppointment.appointment_date
-                                        )
-                                    }
-                                </strong>
-
-                            </div>
-
-
-                            <div>
-
-                                <span>
-                                    Time
-                                </span>
-
-                                <strong>
-                                    {
-                                        formatTime(
-                                            selectedAppointment.appointment_time
-                                        )
-                                    }
-                                </strong>
-
-                            </div>
-
-
-                            <div>
-
-                                <span>
-                                    Status
-                                </span>
-
-                                <strong>
-                                    {
-                                        getStatusLabel(
-                                            selectedAppointment.status
-                                        )
-                                    }
-                                </strong>
-
-                            </div>
-
-
-                            <div className="appointment-detail-full">
-
-                                <span>
-                                    Reason
-                                </span>
-
-                                <p>
-                                    {
-                                        selectedAppointment.reason ||
-                                        "Not provided"
-                                    }
-                                </p>
-
-                            </div>
-
-
-                            <div className="appointment-detail-full">
-
-                                <span>
-                                    Consultation Notes
-                                </span>
-
-                                <p>
-                                    {
-                                        selectedAppointment.consultation_notes ||
-                                        "No consultation notes recorded."
-                                    }
-                                </p>
-
-                            </div>
-
-                        </div>
-
-
-                        <div className="appointment-details-actions">
-
-                            <button
-                                type="button"
-                                className="appointment-cancel-button"
-                                onClick={() =>
-                                    setSelectedAppointment(
-                                        null
-                                    )
-                                }
-                            >
-                                Close
-                            </button>
-
-
-                            <button
-                                type="button"
-                                className="appointment-save-button"
-                                onClick={() => {
-                                    const appointment =
-                                        selectedAppointment;
-
-                                    setSelectedAppointment(
-                                        null
-                                    );
-
-                                    openEditForm(
-                                        appointment
-                                    );
-                                }}
-                            >
-                                Edit Appointment
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            )}
+            <AppointmentFormModal
+                isOpen={formOpen}
+                mode={
+                    editingAppointment
+                        ? "edit"
+                        : "create"
+                }
+                appointment={editingAppointment}
+                patients={patients}
+                doctors={doctors}
+                onClose={closeForm}
+                onSaved={handleAppointmentSaved}
+            />
+
+
+            <AppointmentDetailsModal
+                appointment={selectedAppointment}
+                user={user}
+                doctors={doctors}
+                onClose={() =>
+                    setSelectedAppointment(null)
+                }
+                onEdit={(appointment) =>
+                    handleAppointmentAction(
+                        "edit",
+                        appointment
+                    )
+                }
+                onDelete={(appointment) =>
+                    handleAppointmentAction(
+                        "delete",
+                        appointment
+                    )
+                }
+                onAction={handleAppointmentAction}
+            />
 
 
             {appointmentToDelete && (
@@ -2388,13 +1772,13 @@ function AppointmentsPage() {
 
 
                         <h2>
-                            Delete Appointment?
+                            Permanently Delete Appointment?
                         </h2>
 
 
                         <p>
                             Are you sure you want to
-                            delete the appointment for{" "}
+                            permanently delete the appointment for{" "}
 
                             <strong>
                                 {
@@ -2403,6 +1787,8 @@ function AppointmentsPage() {
                             </strong>
 
                             ? This action cannot be undone.
+                            Use Cancel Appointment instead
+                            when the record should be preserved.
                         </p>
 
 
@@ -2437,7 +1823,7 @@ function AppointmentsPage() {
                                 {
                                     deleting
                                         ? "Deleting..."
-                                        : "Delete Appointment"
+                                        : "Permanently Delete"
                                 }
                             </button>
 
@@ -2448,6 +1834,18 @@ function AppointmentsPage() {
                 </div>
 
             )}
+
+
+            <AppointmentLifecycleModal
+                isOpen={Boolean(
+                    lifecycleAppointment &&
+                    lifecycleAction
+                )}
+                appointment={lifecycleAppointment}
+                action={lifecycleAction}
+                onClose={closeLifecycleModal}
+                onAppointmentChanged={handleAppointmentChanged}
+            />
 
         </div>
     );

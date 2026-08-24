@@ -1,0 +1,333 @@
+.appointment-lifecycle-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 220;
+
+    padding: 22px;
+
+    display: grid;
+    place-items: center;
+
+    overflow-y: auto;
+
+    background: rgba(15, 25, 39, 0.58);
+    backdrop-filter: blur(4px);
+}
+
+.appointment-lifecycle-modal {
+    width: min(520px, 100%);
+    max-height: calc(100dvh - 44px);
+
+    padding: 25px;
+    overflow-y: auto;
+
+    border-radius: 20px;
+
+    background: #ffffff;
+    box-shadow:
+        0 25px 80px
+        rgba(14, 27, 48, 0.25);
+}
+
+.appointment-lifecycle-modal-header {
+    margin-bottom: 18px;
+
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.appointment-lifecycle-modal-header span {
+    display: block;
+
+    margin-bottom: 3px;
+
+    color: #137f6d;
+
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.appointment-lifecycle-modal.cancel
+.appointment-lifecycle-modal-header span {
+    color: #b34c4c;
+}
+
+.appointment-lifecycle-modal.no_show
+.appointment-lifecycle-modal-header span {
+    color: #9a6b20;
+}
+
+.appointment-lifecycle-modal-header h2 {
+    color: #172033;
+    font-size: 20px;
+}
+
+.appointment-lifecycle-modal-close {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+
+    border: 0;
+    border-radius: 10px;
+
+    background: #f1f4f7;
+    color: #657184;
+
+    cursor: pointer;
+    font-size: 22px;
+}
+
+.appointment-lifecycle-modal-close:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.appointment-lifecycle-summary {
+    padding: 16px;
+
+    border-radius: 14px;
+
+    display: flex;
+    align-items: center;
+    gap: 14px;
+
+    background: #f2f9f7;
+}
+
+.appointment-lifecycle-modal.cancel
+.appointment-lifecycle-summary {
+    background: #fff7f7;
+}
+
+.appointment-lifecycle-modal.no_show
+.appointment-lifecycle-summary {
+    background: #fff9ef;
+}
+
+.appointment-lifecycle-avatar {
+    width: 54px;
+    height: 54px;
+    flex-shrink: 0;
+
+    border-radius: 14px;
+
+    display: grid;
+    place-items: center;
+
+    background: #137f6d;
+    color: #ffffff;
+
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.appointment-lifecycle-modal.complete
+.appointment-lifecycle-avatar {
+    background: #3c6f9e;
+}
+
+.appointment-lifecycle-modal.cancel
+.appointment-lifecycle-avatar {
+    background: #b95656;
+}
+
+.appointment-lifecycle-modal.no_show
+.appointment-lifecycle-avatar {
+    background: #a87525;
+}
+
+.appointment-lifecycle-summary-text {
+    min-width: 0;
+}
+
+.appointment-lifecycle-summary-text strong,
+.appointment-lifecycle-summary-text span {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+.appointment-lifecycle-summary-text strong {
+    color: #30443f;
+    font-size: 14px;
+}
+
+.appointment-lifecycle-summary-text span {
+    margin-top: 4px;
+
+    color: #7d8e89;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.appointment-lifecycle-schedule {
+    margin-top: 12px;
+
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.appointment-lifecycle-schedule > div {
+    padding: 12px 13px;
+
+    border: 1px solid #edf1f4;
+    border-radius: 11px;
+
+    background: #fafcfd;
+}
+
+.appointment-lifecycle-schedule span,
+.appointment-lifecycle-schedule strong {
+    display: block;
+}
+
+.appointment-lifecycle-schedule span {
+    margin-bottom: 4px;
+
+    color: #929cab;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.appointment-lifecycle-schedule strong {
+    color: #536073;
+    font-size: 11px;
+    overflow-wrap: anywhere;
+}
+
+.appointment-lifecycle-message {
+    margin: 20px 0 0;
+
+    color: #536073;
+
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.6;
+}
+
+.appointment-lifecycle-error {
+    margin-top: 15px;
+    padding: 11px 13px;
+
+    border: 1px solid #f0caca;
+    border-radius: 10px;
+
+    background: #fff5f5;
+    color: #ad3d3d;
+
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.appointment-lifecycle-actions {
+    margin-top: 22px;
+    padding-top: 17px;
+
+    border-top: 1px solid #edf1f4;
+
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.appointment-lifecycle-cancel,
+.appointment-lifecycle-confirm {
+    min-height: 42px;
+
+    padding: 9px 18px;
+
+    border: 0;
+    border-radius: 11px;
+
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.appointment-lifecycle-cancel {
+    background: #eef2f5;
+    color: #637083;
+}
+
+.appointment-lifecycle-confirm.confirm {
+    background: linear-gradient(135deg, #137f6d, #1da58e);
+    color: #ffffff;
+}
+
+.appointment-lifecycle-confirm.complete {
+    background: linear-gradient(135deg, #32678f, #4789ba);
+    color: #ffffff;
+}
+
+.appointment-lifecycle-confirm.cancel {
+    background: linear-gradient(135deg, #a94444, #c85a5a);
+    color: #ffffff;
+}
+
+.appointment-lifecycle-confirm.no_show {
+    background: linear-gradient(135deg, #95651e, #b98432);
+    color: #ffffff;
+}
+
+.appointment-lifecycle-cancel:disabled,
+.appointment-lifecycle-confirm:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.appointment-lifecycle-modal-close:focus-visible,
+.appointment-lifecycle-cancel:focus-visible,
+.appointment-lifecycle-confirm:focus-visible {
+    outline: 3px solid rgba(19, 127, 109, 0.2);
+    outline-offset: 2px;
+}
+
+@media (max-width: 700px) {
+    .appointment-lifecycle-modal-backdrop {
+        padding: 12px;
+    }
+
+    .appointment-lifecycle-modal {
+        max-height: calc(100dvh - 24px);
+        padding: 20px;
+        border-radius: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .appointment-lifecycle-modal-backdrop {
+        padding: 8px;
+        align-items: end;
+    }
+
+    .appointment-lifecycle-modal {
+        width: 100%;
+        max-height: calc(100dvh - 16px);
+
+        padding: 18px;
+
+        border-radius: 16px 16px 12px 12px;
+    }
+
+    .appointment-lifecycle-modal-header {
+        gap: 12px;
+    }
+
+    .appointment-lifecycle-schedule {
+        grid-template-columns: 1fr;
+    }
+
+    .appointment-lifecycle-actions {
+        flex-direction: column-reverse;
+    }
+
+    .appointment-lifecycle-cancel,
+    .appointment-lifecycle-confirm {
+        width: 100%;
+    }
+}

@@ -1,0 +1,74 @@
+.appointment-action-buttons {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.appointment-action-button {
+    min-height: 32px;
+    padding: 7px 10px;
+
+    border: 0;
+    border-radius: 8px;
+
+    background: #edf5fa;
+    color: #477593;
+
+    cursor: pointer;
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.appointment-action-button:hover {
+    filter: brightness(0.97);
+}
+
+.appointment-action-button:focus-visible {
+    outline: 3px solid rgba(19, 127, 109, 0.2);
+    outline-offset: 2px;
+}
+
+.appointment-action-confirm {
+    background: #e7f7f2;
+    color: #137f6d;
+}
+
+.appointment-action-cancel {
+    background: #fff6e7;
+    color: #986620;
+}
+
+.appointment-action-complete {
+    background: #eaf3ff;
+    color: #3c6f9e;
+}
+
+.appointment-action-edit {
+    background: #edf5fa;
+    color: #477593;
+}
+
+.appointment-action-danger {
+    background: #fff0f0;
+    color: #b94a4a;
+}
+
+@media (max-width: 760px) {
+    .appointment-action-buttons {
+        width: 100%;
+    }
+
+    .appointment-action-button {
+        flex: 1 1 auto;
+        min-width: 74px;
+    }
+}
+
+@media (max-width: 420px) {
+    .appointment-action-button {
+        flex-basis: calc(50% - 6px);
+    }
+}

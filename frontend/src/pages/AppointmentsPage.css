@@ -336,6 +336,12 @@
 }
 
 
+.status-confirmed {
+    background: #eef0ff;
+    color: #565ba6;
+}
+
+
 .status-completed {
     background: #eaf3ff;
     color: #3c6f9e;
@@ -365,7 +371,72 @@
 
 .appointment-actions {
     display: flex;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 5px;
+}
+
+
+.appointment-actions >
+.appointment-action-buttons,
+.appointment-actions >
+.appointment-crud-buttons {
+    flex: 1 1 auto;
+}
+
+
+.appointments-page
+.appointment-action-buttons
+.appointment-action-edit,
+.appointments-page
+.appointment-action-buttons
+.appointment-action-button[aria-label^="Delete appointment"] {
+    display: none;
+}
+
+
+.appointment-crud-buttons {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+
+.appointment-crud-edit,
+.appointment-crud-delete {
+    min-height: 32px;
+    padding: 7px 10px;
+
+    border-radius: 8px;
+
+    cursor: pointer;
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+
+.appointment-crud-edit {
+    border: 0;
+    background: #e7f7f2;
+    color: #137f6d;
+}
+
+
+.appointments-page
+.appointment-crud-delete {
+    border: 1px solid #e6bcbc;
+    background: #ffffff;
+    color: #a94343;
+}
+
+
+.appointment-crud-edit:focus-visible,
+.appointment-crud-delete:focus-visible {
+    outline: 3px solid rgba(19, 127, 109, 0.2);
+    outline-offset: 2px;
 }
 
 
@@ -525,8 +596,7 @@
 }
 
 
-.appointment-form-modal,
-.appointment-details-modal {
+.appointment-form-modal {
     padding: 24px;
 }
 
@@ -649,7 +719,6 @@
 
 
 .appointment-form-actions,
-.appointment-details-actions,
 .appointment-delete-actions {
     margin-top: 20px;
     display: flex;
@@ -685,84 +754,6 @@
             #1da58e
         );
     color: #ffffff;
-}
-
-
-.appointment-details-heading {
-    padding: 18px;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    gap: 13px;
-    background: #f2f9f7;
-}
-
-
-.appointment-details-icon {
-    width: 52px;
-    height: 52px;
-    flex-shrink: 0;
-    border-radius: 14px;
-    display: grid;
-    place-items: center;
-    background: #137f6d;
-    color: #ffffff;
-    font-weight: 900;
-}
-
-
-.appointment-details-heading h3 {
-    font-size: 17px;
-}
-
-
-.appointment-details-heading p {
-    margin: 3px 0 7px;
-    color: #7b8797;
-    font-size: 10px;
-}
-
-
-.appointment-details-grid {
-    margin-top: 17px;
-    display: grid;
-    grid-template-columns:
-        repeat(
-            2,
-            minmax(0, 1fr)
-        );
-    gap: 10px;
-}
-
-
-.appointment-details-grid > div {
-    padding: 13px;
-    border: 1px solid #edf1f4;
-    border-radius: 11px;
-}
-
-
-.appointment-detail-full {
-    grid-column: 1 / -1;
-}
-
-
-.appointment-details-grid span {
-    display: block;
-    margin-bottom: 5px;
-    color: #929cab;
-    font-size: 9px;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-
-.appointment-details-grid strong,
-.appointment-details-grid p {
-    color: #4d596b;
-    font-size: 11px;
-    line-height: 1.55;
-    overflow-wrap: anywhere;
 }
 
 
@@ -902,7 +893,17 @@
     .appointment-mobile-actions {
         margin-top: 13px;
         display: flex;
+        align-items: stretch;
+        flex-wrap: wrap;
         gap: 7px;
+    }
+
+
+    .appointment-mobile-actions >
+    .appointment-action-buttons,
+    .appointment-mobile-actions >
+    .appointment-crud-buttons {
+        flex: 1 1 100%;
     }
 
 
@@ -972,26 +973,22 @@
     }
 
 
-    .appointment-form-grid,
-    .appointment-details-grid {
+    .appointment-form-grid {
         grid-template-columns: 1fr;
     }
 
 
-    .appointment-form-full,
-    .appointment-detail-full {
+    .appointment-form-full {
         grid-column: auto;
     }
 
 
-    .appointment-form-actions,
-    .appointment-details-actions {
+    .appointment-form-actions {
         flex-direction: column-reverse;
     }
 
 
-    .appointment-form-actions button,
-    .appointment-details-actions button {
+    .appointment-form-actions button {
         width: 100%;
     }
 
@@ -1001,8 +998,7 @@
     }
 
 
-    .appointment-form-modal,
-    .appointment-details-modal {
+    .appointment-form-modal {
         padding: 19px;
         border-radius: 16px;
     }

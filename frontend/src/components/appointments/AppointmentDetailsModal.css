@@ -1,0 +1,298 @@
+.appointment-details-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+
+    padding: 22px;
+
+    display: grid;
+    place-items: center;
+
+    overflow-y: auto;
+
+    background: rgba(15, 25, 39, 0.58);
+    backdrop-filter: blur(4px);
+}
+
+.appointment-details-dialog {
+    width: min(720px, 100%);
+    max-height: calc(100dvh - 44px);
+
+    padding: 24px;
+    overflow-y: auto;
+
+    border-radius: 20px;
+
+    background: #ffffff;
+    box-shadow:
+        0 25px 80px
+        rgba(14, 27, 48, 0.25);
+}
+
+.appointment-details-modal-header {
+    margin-bottom: 20px;
+
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.appointment-details-modal-header span {
+    display: block;
+    margin-bottom: 3px;
+
+    color: #137f6d;
+
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.appointment-details-modal-header h2 {
+    color: #172033;
+    font-size: 20px;
+}
+
+.appointment-details-modal-close {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+
+    border: 0;
+    border-radius: 10px;
+
+    background: #f1f4f7;
+    color: #657184;
+
+    cursor: pointer;
+    font-size: 22px;
+}
+
+.appointment-details-heading {
+    padding: 18px;
+
+    border-radius: 14px;
+
+    display: flex;
+    align-items: center;
+    gap: 13px;
+
+    background: #f2f9f7;
+}
+
+.appointment-details-icon {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+
+    border-radius: 14px;
+
+    display: grid;
+    place-items: center;
+
+    background: #137f6d;
+    color: #ffffff;
+
+    font-weight: 900;
+}
+
+.appointment-details-heading h3 {
+    font-size: 17px;
+}
+
+.appointment-details-heading p {
+    margin: 3px 0 7px;
+
+    color: #7b8797;
+    font-size: 10px;
+}
+
+.appointment-details-status-badge {
+    display: inline-block;
+
+    padding: 5px 9px;
+
+    border-radius: 20px;
+
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.appointment-details-dialog .status-scheduled {
+    background: #e7f7f2;
+    color: #137f6d;
+}
+
+.appointment-details-dialog .status-confirmed {
+    background: #eef0ff;
+    color: #565ba6;
+}
+
+.appointment-details-dialog .status-completed {
+    background: #eaf3ff;
+    color: #3c6f9e;
+}
+
+.appointment-details-dialog .status-cancelled {
+    background: #fff0f0;
+    color: #b94a4a;
+}
+
+.appointment-details-dialog .status-no_show {
+    background: #f2f3f5;
+    color: #717b89;
+}
+
+.appointment-details-grid {
+    margin-top: 17px;
+
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.appointment-details-grid > div {
+    padding: 13px;
+
+    border: 1px solid #edf1f4;
+    border-radius: 11px;
+}
+
+.appointment-details-full {
+    grid-column: 1 / -1;
+}
+
+.appointment-details-grid span {
+    display: block;
+    margin-bottom: 5px;
+
+    color: #929cab;
+
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.appointment-details-grid strong,
+.appointment-details-grid p {
+    color: #4d596b;
+
+    font-size: 11px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+
+.appointment-details-actions {
+    margin-top: 20px;
+
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.appointment-details-close-action,
+.appointment-details-edit-action,
+.appointment-details-delete-action {
+    min-height: 41px;
+    padding: 9px 16px;
+
+    border-radius: 10px;
+
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.appointment-details-close-action {
+    border: 1px solid #dfe5eb;
+    background: #ffffff;
+    color: #667184;
+}
+
+.appointment-details-crud-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.appointment-details-edit-action {
+    border: 0;
+    background: #e7f7f2;
+    color: #137f6d;
+}
+
+.appointment-details-delete-action {
+    border: 1px solid #e6bcbc;
+    background: #ffffff;
+    color: #a94343;
+}
+
+.appointment-details-actions
+.appointment-action-edit,
+.appointment-details-actions
+.appointment-action-button[aria-label^="Delete appointment"] {
+    display: none;
+}
+
+.appointment-details-modal-close:focus-visible,
+.appointment-details-close-action:focus-visible,
+.appointment-details-edit-action:focus-visible,
+.appointment-details-delete-action:focus-visible {
+    outline: 3px solid rgba(19, 127, 109, 0.2);
+    outline-offset: 2px;
+}
+
+@media (max-width: 700px) {
+    .appointment-details-modal-backdrop {
+        padding: 12px;
+    }
+
+    .appointment-details-dialog {
+        max-height: calc(100dvh - 24px);
+        padding: 20px;
+        border-radius: 16px;
+    }
+
+    .appointment-details-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .appointment-details-full {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .appointment-details-modal-backdrop {
+        padding: 8px;
+        align-items: end;
+    }
+
+    .appointment-details-dialog {
+        width: 100%;
+        max-height: calc(100dvh - 16px);
+
+        padding: 18px;
+
+        border-radius: 16px 16px 12px 12px;
+    }
+
+    .appointment-details-modal-header {
+        gap: 12px;
+    }
+
+    .appointment-details-actions {
+        align-items: stretch;
+        flex-direction: column-reverse;
+    }
+
+    .appointment-details-actions > button,
+    .appointment-details-actions >
+    .appointment-action-buttons,
+    .appointment-details-crud-actions,
+    .appointment-details-crud-actions button {
+        width: 100%;
+    }
+}
