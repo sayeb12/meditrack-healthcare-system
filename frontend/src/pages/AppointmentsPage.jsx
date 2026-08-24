@@ -1,4 +1,5 @@
 import {
+    useCallback,
     useEffect,
     useMemo,
     useState,
@@ -16,6 +17,9 @@ import {
 
 import useCurrentUser
     from "../hooks/useCurrentUser";
+
+import useAppointments
+    from "../hooks/useAppointments";
 
 import AppointmentDetailsModal
     from "../components/appointments/AppointmentDetailsModal";
@@ -37,23 +41,6 @@ import DeleteAppointmentModal
 
 import "./DashboardPage.css";
 import "./AppointmentsPage.css";
-
-
-const normalizeList = (data) => {
-    if (Array.isArray(data)) {
-        return data;
-    }
-
-    if (
-        Array.isArray(
-            data?.results
-        )
-    ) {
-        return data.results;
-    }
-
-    return [];
-};
 
 
 const normalizeEmail = (value) => {
@@ -153,40 +140,24 @@ function AppointmentsPage() {
         useCurrentUser();
 
 
+    const {
+        appointments,
+        patients,
+        doctors,
+        loading,
+        error,
+        loadData,
+        refreshAppointments,
+        createAppointment,
+        updateAppointment,
+        deleteAppointment,
+    } = useAppointments();
+
+
     const [
         mobileMenuOpen,
         setMobileMenuOpen,
     ] = useState(false);
-
-
-    const [
-        appointments,
-        setAppointments,
-    ] = useState([]);
-
-
-    const [
-        patients,
-        setPatients,
-    ] = useState([]);
-
-
-    const [
-        doctors,
-        setDoctors,
-    ] = useState([]);
-
-
-    const [
-        loading,
-        setLoading,
-    ] = useState(true);
-
-
-    const [
-        error,
-        setError,
-    ] = useState("");
 
 
     const [
@@ -255,141 +226,35 @@ function AppointmentsPage() {
     ] = useState(null);
 
 
-    const handleSessionError = (
-        requestError
-    ) => {
-        if (
-            requestError.status ===
-            401
-        ) {
-            clearAuthSession();
-
-            navigate(
-                "/",
-                {
-                    replace: true,
-                }
-            );
-
-            return true;
-        }
-
-        return false;
-    };
-
-
-    const loadAppointments =
-        async () => {
-            setLoading(true);
-            setError("");
-
-            try {
-                const appointmentData =
-                    await apiRequest(
-                        "/appointments/"
-                    );
-
-                setAppointments(
-                    normalizeList(
-                        appointmentData
-                    )
-                );
-            }
-
-            catch (
-                requestError
+    const handleSessionError = useCallback(
+        (requestError) => {
+            if (
+                requestError.status ===
+                401
             ) {
-                if (
-                    handleSessionError(
-                        requestError
-                    )
-                ) {
-                    return;
-                }
+                clearAuthSession();
 
-                setError(
-                    requestError.message ||
-                    "Unable to load appointments."
-                );
-            }
-
-            finally {
-                setLoading(false);
-            }
-        };
-
-
-    const loadData =
-        async () => {
-            setLoading(true);
-            setError("");
-
-            try {
-                const [
-                    appointmentData,
-                    patientData,
-                    doctorData,
-                ] =
-                    await Promise.all([
-                        apiRequest(
-                            "/appointments/"
-                        ),
-
-                        apiRequest(
-                            "/patients/"
-                        ),
-
-                        apiRequest(
-                            "/doctors/"
-                        ),
-                    ]);
-
-
-                setAppointments(
-                    normalizeList(
-                        appointmentData
-                    )
+                navigate(
+                    "/",
+                    {
+                        replace: true,
+                    }
                 );
 
-                setPatients(
-                    normalizeList(
-                        patientData
-                    )
-                );
-
-                setDoctors(
-                    normalizeList(
-                        doctorData
-                    )
-                );
+                return true;
             }
 
-            catch (
-                requestError
-            ) {
-                if (
-                    handleSessionError(
-                        requestError
-                    )
-                ) {
-                    return;
-                }
-
-                setError(
-                    requestError.message ||
-                    "Unable to load appointment data."
-                );
-            }
-
-            finally {
-                setLoading(false);
-            }
-        };
+            return false;
+        },
+        [navigate]
+    );
 
 
     useEffect(() => {
-        loadData();
-    }, []);
+        loadData().catch(
+            handleSessionError
+        );
+    }, [handleSessionError, loadData]);
 
 
     const filteredAppointments =
@@ -564,7 +429,15 @@ function AppointmentsPage() {
             "Appointment updated successfully."
         );
 
-        await loadAppointments();
+        try {
+            await refreshAppointments();
+        }
+
+        catch (requestError) {
+            handleSessionError(
+                requestError
+            );
+        }
     };
 
 
@@ -583,12 +456,9 @@ function AppointmentsPage() {
 
         try {
             if (mode === "edit") {
-                await apiRequest(
-                    `/appointments/${appointment.id}/`,
-                    {
-                        method: "PATCH",
-                        body: payload,
-                    }
+                await updateAppointment(
+                    appointment.id,
+                    payload
                 );
 
                 setSuccessMessage(
@@ -597,12 +467,8 @@ function AppointmentsPage() {
             }
 
             else {
-                await apiRequest(
-                    "/appointments/",
-                    {
-                        method: "POST",
-                        body: payload,
-                    }
+                await createAppointment(
+                    payload
                 );
 
                 setSuccessMessage(
@@ -610,7 +476,15 @@ function AppointmentsPage() {
                 );
             }
 
-            await loadAppointments();
+            try {
+                await refreshAppointments();
+            }
+
+            catch (requestError) {
+                handleSessionError(
+                    requestError
+                );
+            }
         }
 
         catch (requestError) {
@@ -644,22 +518,25 @@ function AppointmentsPage() {
 
             setDeleting(true);
 
-            setError("");
             setDeleteError("");
             setSuccessMessage("");
 
 
             try {
-                await apiRequest(
-                    `/appointments/${appointmentToDelete.id}/`,
-                    {
-                        method:
-                            "DELETE",
-                    }
+                await deleteAppointment(
+                    appointmentToDelete.id
                 );
 
 
-                await loadAppointments();
+                try {
+                    await refreshAppointments();
+                }
+
+                catch (requestError) {
+                    handleSessionError(
+                        requestError
+                    );
+                }
 
 
                 setSuccessMessage(
