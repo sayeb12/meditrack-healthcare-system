@@ -208,6 +208,7 @@ class PatientAPICharacterizationTests(TestCase):
                 "address",
                 "blood_group",
                 "medical_notes",
+                "is_archived",
                 "created_at",
                 "updated_at",
             }
@@ -273,7 +274,7 @@ class PatientAPICharacterizationTests(TestCase):
         )
 
 
-    def test_owner_can_permanently_delete_own_patient(self):
+    def test_owner_delete_archives_patient(self):
 
         self.authenticate(self.user_a)
 
@@ -288,9 +289,34 @@ class PatientAPICharacterizationTests(TestCase):
             response.status_code,
             status.HTTP_204_NO_CONTENT
         )
-        self.assertFalse(
+        self.patient_a.refresh_from_db()
+        self.assertTrue(self.patient_a.is_archived)
+        self.assertTrue(
             Patient.objects.filter(
                 pk=self.patient_a.pk
+            ).exists()
+        )
+
+
+    def test_appointments_remain_after_patient_archive(self):
+
+        self.authenticate(self.user_a)
+
+        response = self.client.delete(
+            reverse(
+                "patient-detail",
+                args=[self.patient_a.pk]
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_204_NO_CONTENT
+        )
+        self.assertTrue(
+            Appointment.objects.filter(
+                pk=self.assigned_appointment.pk,
+                patient=self.patient_a,
             ).exists()
         )
 
@@ -422,6 +448,208 @@ class PatientAPICharacterizationTests(TestCase):
             response.data["id"],
             self.patient_b.pk
         )
+
+
+    def test_staff_can_retrieve_archived_patient(self):
+
+        self.patient_a.is_archived = True
+        self.patient_a.save(
+            update_fields=["is_archived"]
+        )
+        self.authenticate(self.staff_user)
+
+        response = self.client.get(
+            reverse(
+                "patient-detail",
+                args=[self.patient_a.pk]
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertTrue(response.data["is_archived"])
+
+
+    def test_staff_include_archived_controls_list_filtering(self):
+
+        self.patient_a.is_archived = True
+        self.patient_a.save(
+            update_fields=["is_archived"]
+        )
+        self.authenticate(self.staff_user)
+
+        default_response = self.client.get(
+            reverse("patient-list-create")
+        )
+        archived_response = self.client.get(
+            reverse("patient-list-create"),
+            {
+                "include_archived": "true",
+            },
+        )
+
+        self.assertEqual(
+            default_response.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertNotIn(
+            self.patient_a.pk,
+            [
+                patient["id"]
+                for patient in default_response.data
+            ]
+        )
+        self.assertEqual(
+            archived_response.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertEqual(
+            {
+                patient["id"]
+                for patient in archived_response.data
+            },
+            {
+                self.patient_a.pk,
+                self.patient_b.pk,
+            }
+        )
+
+
+    def test_non_staff_cannot_include_archived_patients(self):
+
+        self.authenticate(self.user_a)
+
+        response = self.client.get(
+            reverse("patient-list-create"),
+            {
+                "include_archived": "true",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN
+        )
+
+
+    def test_anonymous_user_cannot_include_archived_patients(self):
+
+        response = self.client.get(
+            reverse("patient-list-create"),
+            {
+                "include_archived": "true",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_401_UNAUTHORIZED
+        )
+
+
+    def test_non_staff_cannot_retrieve_archived_patient(self):
+
+        self.patient_a.is_archived = True
+        self.patient_a.save(
+            update_fields=["is_archived"]
+        )
+
+        for user in (
+            self.user_a,
+            self.doctor_user,
+        ):
+            with self.subTest(user=user.email):
+                self.authenticate(user)
+
+                response = self.client.get(
+                    reverse(
+                        "patient-detail",
+                        args=[self.patient_a.pk]
+                    )
+                )
+
+                self.assertEqual(
+                    response.status_code,
+                    status.HTTP_404_NOT_FOUND
+                )
+
+
+    def test_staff_can_restore_archived_patient(self):
+
+        self.patient_a.is_archived = True
+        self.patient_a.save(
+            update_fields=["is_archived"]
+        )
+        self.authenticate(self.staff_user)
+
+        response = self.client.post(
+            reverse(
+                "patient-restore",
+                args=[self.patient_a.pk]
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertFalse(response.data["is_archived"])
+
+        self.patient_a.refresh_from_db()
+        self.assertFalse(self.patient_a.is_archived)
+
+
+    def test_restore_active_patient_is_idempotent(self):
+
+        patient_count = Patient.objects.count()
+        self.authenticate(self.staff_user)
+
+        response = self.client.post(
+            reverse(
+                "patient-restore",
+                args=[self.patient_a.pk]
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertEqual(
+            response.data["id"],
+            self.patient_a.pk
+        )
+        self.assertFalse(response.data["is_archived"])
+        self.assertEqual(
+            Patient.objects.count(),
+            patient_count
+        )
+
+
+    def test_non_staff_cannot_restore_archived_patient(self):
+
+        self.patient_a.is_archived = True
+        self.patient_a.save(
+            update_fields=["is_archived"]
+        )
+        self.authenticate(self.user_a)
+
+        response = self.client.post(
+            reverse(
+                "patient-restore",
+                args=[self.patient_a.pk]
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN
+        )
+
+        self.patient_a.refresh_from_db()
+        self.assertTrue(self.patient_a.is_archived)
 
 
     def test_doctor_can_read_assigned_patient(self):

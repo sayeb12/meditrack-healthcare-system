@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     PatientListCreateView,
     PatientRetrieveUpdateDeleteView,
+    PatientRestoreView,
 )
 
 
@@ -12,6 +13,13 @@ urlpatterns = [
         "",
         PatientListCreateView.as_view(),
         name="patient-list-create"
+    ),
+
+
+    path(
+        "<int:pk>/restore/",
+        PatientRestoreView.as_view(),
+        name="patient-restore"
     ),
 
 

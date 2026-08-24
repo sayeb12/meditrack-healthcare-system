@@ -25,6 +25,7 @@ class PatientReadSerializer(serializers.ModelSerializer):
             "address",
             "blood_group",
             "medical_notes",
+            "is_archived",
             "created_at",
             "updated_at",
         ]
@@ -40,6 +41,7 @@ class PatientReadSerializer(serializers.ModelSerializer):
             "address",
             "blood_group",
             "medical_notes",
+            "is_archived",
             "created_at",
             "updated_at",
         ]
@@ -52,6 +54,7 @@ class PatientCreateSerializer(PatientReadSerializer):
         read_only_fields = [
             "id",
             "created_by",
+            "is_archived",
             "created_at",
             "updated_at",
         ]

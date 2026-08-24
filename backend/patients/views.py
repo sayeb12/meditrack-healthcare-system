@@ -1,9 +1,12 @@
 from django.db.models import Q
 from rest_framework import generics
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import (
+    IsAdminUser,
     IsAuthenticated,
     SAFE_METHODS,
 )
+from rest_framework.response import Response
 
 from .models import Patient
 from .serializers import (
@@ -57,11 +60,13 @@ class PatientAccessQuerysetMixin:
                         appointments__doctor__user=user
                     )
                 )
+                .filter(is_archived=False)
                 .distinct()
             )
 
         return queryset.filter(
-            created_by=user
+            created_by=user,
+            is_archived=False,
         )
 
 
@@ -86,6 +91,31 @@ class PatientListCreateView(
     ]
 
 
+    def get_queryset(self):
+
+        queryset = super().get_queryset()
+
+        if self.request.method not in SAFE_METHODS:
+            return queryset
+
+        include_archived = (
+            self.request.query_params
+            .get("include_archived", "")
+            .lower()
+            == "true"
+        )
+
+        if include_archived:
+            if not self.request.user.is_staff:
+                raise PermissionDenied(
+                    "Only staff users can view archived patients."
+                )
+
+            return queryset
+
+        return queryset.filter(is_archived=False)
+
+
     def perform_create(
         self,
         serializer
@@ -106,3 +136,47 @@ class PatientRetrieveUpdateDeleteView(
     permission_classes = [
         IsAuthenticated
     ]
+
+
+    def perform_destroy(self, instance):
+
+        instance.is_archived = True
+        instance.save(
+            update_fields=[
+                "is_archived",
+                "updated_at",
+            ]
+        )
+
+
+class PatientRestoreView(generics.GenericAPIView):
+
+    queryset = (
+        Patient.objects
+        .select_related("created_by")
+        .all()
+    )
+
+    serializer_class = PatientReadSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+        IsAdminUser,
+    ]
+
+    def post(self, request, *args, **kwargs):
+
+        patient = self.get_object()
+
+        if patient.is_archived:
+            patient.is_archived = False
+            patient.save(
+                update_fields=[
+                    "is_archived",
+                    "updated_at",
+                ]
+            )
+
+        serializer = self.get_serializer(patient)
+
+        return Response(serializer.data)
