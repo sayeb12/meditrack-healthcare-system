@@ -17,9 +17,6 @@ import {
 import useCurrentUser
     from "../hooks/useCurrentUser";
 
-import AppointmentActionButtons
-    from "../components/appointments/AppointmentActionButtons";
-
 import AppointmentDetailsModal
     from "../components/appointments/AppointmentDetailsModal";
 
@@ -28,6 +25,12 @@ import AppointmentFormModal
 
 import AppointmentLifecycleModal
     from "../components/appointments/AppointmentLifecycleModal";
+
+import AppointmentMobileCards
+    from "../components/appointments/AppointmentMobileCards";
+
+import AppointmentTable
+    from "../components/appointments/AppointmentTable";
 
 import DeleteAppointmentModal
     from "../components/appointments/DeleteAppointmentModal";
@@ -137,150 +140,6 @@ const isCreatedByUser = (
         creatorEmail &&
         userEmail &&
         creatorEmail === userEmail
-    );
-};
-
-
-function AppointmentCrudButtons({
-    appointment,
-    user,
-    onAction,
-}) {
-    if (!appointment || !user) {
-        return null;
-    }
-
-    const creator =
-        isCreatedByUser(
-            appointment.created_by,
-            user
-        );
-
-    const canEdit =
-        user.is_staff === true ||
-        creator;
-
-    const canDelete = creator;
-
-    if (!canEdit && !canDelete) {
-        return null;
-    }
-
-    const patientName =
-        appointment.patient_name ||
-        "this patient";
-
-    return (
-        <div className="appointment-crud-buttons">
-            {canEdit && (
-                <button
-                    type="button"
-                    className="appointment-crud-edit"
-                    onClick={() =>
-                        onAction(
-                            "edit",
-                            appointment
-                        )
-                    }
-                    aria-label={
-                        `Edit appointment for ${patientName}`
-                    }
-                >
-                    Edit
-                </button>
-            )}
-
-            {canDelete && (
-                <button
-                    type="button"
-                    className="appointment-crud-delete"
-                    onClick={() =>
-                        onAction(
-                            "delete",
-                            appointment
-                        )
-                    }
-                    aria-label={
-                        `Permanently delete appointment for ${patientName}`
-                    }
-                >
-                    Delete
-                </button>
-            )}
-        </div>
-    );
-}
-
-
-const formatDate = (
-    dateString
-) => {
-    if (!dateString) {
-        return "Not provided";
-    }
-
-    const date =
-        new Date(
-            `${dateString}T00:00:00`
-        );
-
-    return date.toLocaleDateString(
-        undefined,
-        {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-        }
-    );
-};
-
-
-const formatTime = (
-    timeString
-) => {
-    if (!timeString) {
-        return "Not provided";
-    }
-
-    const [
-        hour,
-        minute,
-    ] = timeString.split(":");
-
-    const date =
-        new Date();
-
-    date.setHours(
-        Number(hour),
-        Number(minute),
-        0,
-        0
-    );
-
-    return date.toLocaleTimeString(
-        [],
-        {
-            hour: "numeric",
-            minute: "2-digit",
-        }
-    );
-};
-
-
-const getStatusLabel = (
-    status
-) => {
-    const labels = {
-        scheduled: "Scheduled",
-        confirmed: "Confirmed",
-        completed: "Completed",
-        cancelled: "Cancelled",
-        no_show: "No Show",
-    };
-
-    return (
-        labels[status] ||
-        status
     );
 };
 
@@ -1367,356 +1226,46 @@ function AppointmentsPage() {
                                 : (
                                     <>
 
-                                        <div className="appointments-table-wrapper">
-
-                                            <table className="appointments-table">
-
-                                                <thead>
-                                                    <tr>
-                                                        <th>
-                                                            Patient
-                                                        </th>
-
-                                                        <th>
-                                                            Doctor
-                                                        </th>
-
-                                                        <th>
-                                                            Date
-                                                        </th>
-
-                                                        <th>
-                                                            Time
-                                                        </th>
-
-                                                        <th>
-                                                            Status
-                                                        </th>
-
-                                                        <th>
-                                                            Reason
-                                                        </th>
-
-                                                        <th>
-                                                            Actions
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-
-
-                                                <tbody>
-
-                                                    {
-                                                        filteredAppointments.map(
-                                                            (
-                                                                appointment
-                                                            ) => (
-                                                                <tr
-                                                                    key={
-                                                                        appointment.id
-                                                                    }
-                                                                >
-
-                                                                    <td>
-
-                                                                        <div className="appointment-person">
-
-                                                                            <div className="appointment-person-avatar">
-                                                                                P
-                                                                            </div>
-
-
-                                                                            <div>
-
-                                                                                <strong>
-                                                                                    {
-                                                                                        appointment.patient_name
-                                                                                    }
-                                                                                </strong>
-
-                                                                                <span>
-                                                                                    Patient #{appointment.patient}
-                                                                                </span>
-
-                                                                            </div>
-
-                                                                        </div>
-
-                                                                    </td>
-
-
-                                                                    <td>
-
-                                                                        <div className="appointment-doctor">
-
-                                                                            <strong>
-                                                                                {
-                                                                                    appointment.doctor_name
-                                                                                }
-                                                                            </strong>
-
-                                                                            <span>
-                                                                                {
-                                                                                    appointment.doctor_specialization ||
-                                                                                    "General"
-                                                                                }
-                                                                            </span>
-
-                                                                        </div>
-
-                                                                    </td>
-
-
-                                                                    <td>
-                                                                        {
-                                                                            formatDate(
-                                                                                appointment.appointment_date
-                                                                            )
-                                                                        }
-                                                                    </td>
-
-
-                                                                    <td>
-                                                                        {
-                                                                            formatTime(
-                                                                                appointment.appointment_time
-                                                                            )
-                                                                        }
-                                                                    </td>
-
-
-                                                                    <td>
-
-                                                                        <span
-                                                                            className={
-                                                                                `appointment-status-badge status-${appointment.status}`
-                                                                            }
-                                                                        >
-                                                                            {
-                                                                                getStatusLabel(
-                                                                                    appointment.status
-                                                                                )
-                                                                            }
-                                                                        </span>
-
-                                                                    </td>
-
-
-                                                                    <td>
-
-                                                                        <span className="appointment-reason">
-                                                                            {
-                                                                                appointment.reason ||
-                                                                                "Not provided"
-                                                                            }
-                                                                        </span>
-
-                                                                    </td>
-
-
-                                                                    <td>
-
-                                                                        <div className="appointment-actions">
-
-                                                                            <button
-                                                                                type="button"
-                                                                                className="appointment-view-action"
-                                                                                onClick={() =>
-                                                                                    setSelectedAppointment(
-                                                                                        appointment
-                                                                                    )
-                                                                                }
-                                                                            >
-                                                                                View
-                                                                            </button>
-
-
-                                                                            <AppointmentActionButtons
-                                                                                appointment={appointment}
-                                                                                user={user}
-                                                                                doctors={doctors}
-                                                                                onAction={handleAppointmentAction}
-                                                                            />
-
-
-                                                                            <AppointmentCrudButtons
-                                                                                appointment={appointment}
-                                                                                user={user}
-                                                                                onAction={handleAppointmentAction}
-                                                                            />
-
-                                                                        </div>
-
-                                                                    </td>
-
-                                                                </tr>
-                                                            )
-                                                        )
-                                                    }
-
-                                                </tbody>
-
-                                            </table>
-
-                                        </div>
-
-
-                                        <div className="appointments-mobile-list">
-
-                                            {
-                                                filteredAppointments.map(
-                                                    (
-                                                        appointment
-                                                    ) => (
-                                                        <article
-                                                            className="appointment-mobile-card"
-                                                            key={
-                                                                appointment.id
-                                                            }
-                                                        >
-
-                                                            <div className="appointment-mobile-header">
-
-                                                                <div>
-
-                                                                    <strong>
-                                                                        {
-                                                                            appointment.patient_name
-                                                                        }
-                                                                    </strong>
-
-                                                                    <span>
-                                                                        {
-                                                                            appointment.doctor_name
-                                                                        }
-                                                                    </span>
-
-                                                                </div>
-
-
-                                                                <span
-                                                                    className={
-                                                                        `appointment-status-badge status-${appointment.status}`
-                                                                    }
-                                                                >
-                                                                    {
-                                                                        getStatusLabel(
-                                                                            appointment.status
-                                                                        )
-                                                                    }
-                                                                </span>
-
-                                                            </div>
-
-
-                                                            <div className="appointment-mobile-details">
-
-                                                                <div>
-
-                                                                    <span>
-                                                                        Date
-                                                                    </span>
-
-                                                                    <strong>
-                                                                        {
-                                                                            formatDate(
-                                                                                appointment.appointment_date
-                                                                            )
-                                                                        }
-                                                                    </strong>
-
-                                                                </div>
-
-
-                                                                <div>
-
-                                                                    <span>
-                                                                        Time
-                                                                    </span>
-
-                                                                    <strong>
-                                                                        {
-                                                                            formatTime(
-                                                                                appointment.appointment_time
-                                                                            )
-                                                                        }
-                                                                    </strong>
-
-                                                                </div>
-
-
-                                                                <div>
-
-                                                                    <span>
-                                                                        Specialization
-                                                                    </span>
-
-                                                                    <strong>
-                                                                        {
-                                                                            appointment.doctor_specialization ||
-                                                                            "General"
-                                                                        }
-                                                                    </strong>
-
-                                                                </div>
-
-
-                                                                <div>
-
-                                                                    <span>
-                                                                        Reason
-                                                                    </span>
-
-                                                                    <strong>
-                                                                        {
-                                                                            appointment.reason ||
-                                                                            "Not provided"
-                                                                        }
-                                                                    </strong>
-
-                                                                </div>
-
-                                                            </div>
-
-
-                                                            <div className="appointment-mobile-actions">
-
-                                                                <button
-                                                                    type="button"
-                                                                    className="appointment-view-action"
-                                                                    onClick={() =>
-                                                                        setSelectedAppointment(
-                                                                            appointment
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    View
-                                                                </button>
-
-
-                                                                <AppointmentActionButtons
-                                                                    appointment={appointment}
-                                                                    user={user}
-                                                                    doctors={doctors}
-                                                                    onAction={handleAppointmentAction}
-                                                                />
-
-
-                                                                <AppointmentCrudButtons
-                                                                    appointment={appointment}
-                                                                    user={user}
-                                                                    onAction={handleAppointmentAction}
-                                                                />
-
-                                                            </div>
-
-                                                        </article>
-                                                    )
+                                        <AppointmentTable
+                                            appointments={filteredAppointments}
+                                            user={user}
+                                            doctors={doctors}
+                                            onView={setSelectedAppointment}
+                                            onEdit={(appointment) =>
+                                                handleAppointmentAction(
+                                                    "edit",
+                                                    appointment
                                                 )
                                             }
+                                            onDelete={(appointment) =>
+                                                handleAppointmentAction(
+                                                    "delete",
+                                                    appointment
+                                                )
+                                            }
+                                            onAction={handleAppointmentAction}
+                                        />
 
-                                        </div>
 
+                                        <AppointmentMobileCards
+                                            appointments={filteredAppointments}
+                                            user={user}
+                                            doctors={doctors}
+                                            onView={setSelectedAppointment}
+                                            onEdit={(appointment) =>
+                                                handleAppointmentAction(
+                                                    "edit",
+                                                    appointment
+                                                )
+                                            }
+                                            onDelete={(appointment) =>
+                                                handleAppointmentAction(
+                                                    "delete",
+                                                    appointment
+                                                )
+                                            }
+                                            onAction={handleAppointmentAction}
+                                        />
                                     </>
                                 )
                     }

@@ -1,0 +1,158 @@
+.appointments-mobile-list {
+    display: none;
+}
+
+@media (max-width: 760px) {
+    .appointments-mobile-list {
+        padding: 12px;
+
+        display: grid;
+        gap: 11px;
+    }
+
+    .appointment-mobile-card {
+        padding: 15px;
+
+        border: 1px solid #e8edf2;
+        border-radius: 14px;
+
+        background: #ffffff;
+    }
+
+    .appointment-mobile-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .appointment-mobile-header strong {
+        display: block;
+
+        color: #172033;
+        font-size: 12px;
+    }
+
+    .appointment-mobile-header span:not(.appointment-status-badge) {
+        display: block;
+        margin-top: 3px;
+
+        color: #8994a4;
+        font-size: 9px;
+    }
+
+    .appointment-status-badge {
+        display: inline-block;
+        padding: 5px 9px;
+
+        border-radius: 20px;
+
+        font-size: 8px;
+        font-weight: 800;
+    }
+
+    .status-scheduled {
+        background: #e7f7f2;
+        color: #137f6d;
+    }
+
+    .status-confirmed {
+        background: #eef0ff;
+        color: #565ba6;
+    }
+
+    .status-completed {
+        background: #eaf3ff;
+        color: #3c6f9e;
+    }
+
+    .status-cancelled {
+        background: #fff0f0;
+        color: #b94a4a;
+    }
+
+    .status-no_show {
+        background: #f2f3f5;
+        color: #717b89;
+    }
+
+    .appointment-mobile-details {
+        margin-top: 14px;
+
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .appointment-mobile-details > div {
+        padding: 10px;
+
+        border-radius: 9px;
+
+        background: #f8fafc;
+    }
+
+    .appointment-mobile-details span {
+        display: block;
+        margin-bottom: 4px;
+
+        color: #929cab;
+
+        font-size: 8px;
+        text-transform: uppercase;
+    }
+
+    .appointment-mobile-details strong {
+        display: block;
+
+        color: #536073;
+
+        font-size: 10px;
+        overflow-wrap: anywhere;
+    }
+
+    .appointment-mobile-actions {
+        display: flex;
+        align-items: stretch;
+        flex-wrap: wrap;
+        gap: 7px;
+    }
+
+    .appointment-mobile-actions {
+        margin-top: 13px;
+    }
+
+    .appointment-mobile-actions >
+    .appointment-action-buttons {
+        flex: 1 1 100%;
+    }
+
+    .appointment-mobile-actions button {
+        flex: 1;
+
+        min-height: 30px;
+        padding: 6px 8px;
+
+        border-radius: 8px;
+
+        cursor: pointer;
+        font-size: 8px;
+        font-weight: 800;
+    }
+
+    .appointment-view-action {
+        border: 0;
+        background: #edf5fa;
+        color: #477593;
+    }
+
+}
+
+@media (max-width: 420px) {
+    .appointment-mobile-details {
+        grid-template-columns: 1fr;
+    }
+
+    .appointment-mobile-actions {
+        flex-wrap: wrap;
+    }
+}
