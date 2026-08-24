@@ -6,7 +6,29 @@ from rest_framework.permissions import (
 )
 
 from .models import Patient
-from .serializers import PatientSerializer
+from .serializers import (
+    PatientCreateSerializer,
+    PatientReadSerializer,
+    PatientUpdateSerializer,
+)
+
+
+class PatientSerializerSelectionMixin:
+
+    serializer_class = PatientReadSerializer
+
+    def get_serializer_class(self):
+
+        if self.request.method == "POST":
+            return PatientCreateSerializer
+
+        if self.request.method in {
+            "PUT",
+            "PATCH",
+        }:
+            return PatientUpdateSerializer
+
+        return PatientReadSerializer
 
 
 class PatientAccessQuerysetMixin:
@@ -55,10 +77,9 @@ class PatientAccessQuerysetMixin:
 
 class PatientListCreateView(
     PatientAccessQuerysetMixin,
+    PatientSerializerSelectionMixin,
     generics.ListCreateAPIView
 ):
-
-    serializer_class = PatientSerializer
 
     permission_classes = [
         IsAuthenticated
@@ -78,10 +99,9 @@ class PatientListCreateView(
 
 class PatientRetrieveUpdateDeleteView(
     PatientAccessQuerysetMixin,
+    PatientSerializerSelectionMixin,
     generics.RetrieveUpdateDestroyAPIView
 ):
-
-    serializer_class = PatientSerializer
 
     permission_classes = [
         IsAuthenticated

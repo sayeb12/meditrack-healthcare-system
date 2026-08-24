@@ -180,6 +180,40 @@ class PatientAPICharacterizationTests(TestCase):
         )
 
 
+    def test_get_response_fields_remain_compatible(self):
+
+        self.authenticate(self.user_a)
+
+        response = self.client.get(
+            reverse(
+                "patient-detail",
+                args=[self.patient_a.pk]
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertEqual(
+            set(response.data.keys()),
+            {
+                "id",
+                "created_by",
+                "full_name",
+                "date_of_birth",
+                "gender",
+                "phone_number",
+                "email",
+                "address",
+                "blood_group",
+                "medical_notes",
+                "created_at",
+                "updated_at",
+            }
+        )
+
+
     def test_owner_can_update_own_patient(self):
 
         self.authenticate(self.user_a)
@@ -204,6 +238,38 @@ class PatientAPICharacterizationTests(TestCase):
         self.assertEqual(
             self.patient_a.full_name,
             "Updated Patient A"
+        )
+
+
+    def test_patch_cannot_change_patient_owner(self):
+
+        self.authenticate(self.user_a)
+
+        response = self.client.patch(
+            reverse(
+                "patient-detail",
+                args=[self.patient_a.pk]
+            ),
+            {
+                "created_by": self.user_b.pk,
+                "full_name": "Owner Preserved",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
+
+        self.patient_a.refresh_from_db()
+        self.assertEqual(
+            self.patient_a.created_by,
+            self.user_a
+        )
+        self.assertEqual(
+            response.data["created_by"],
+            self.user_a.email
         )
 
 
@@ -634,4 +700,28 @@ class PatientAPICharacterizationTests(TestCase):
             response.status_code,
             status.HTTP_400_BAD_REQUEST
         )
+        self.assertIn("email", response.data)
+
+
+    def test_update_preserves_existing_field_validation(self):
+
+        self.authenticate(self.user_a)
+
+        response = self.client.patch(
+            reverse(
+                "patient-detail",
+                args=[self.patient_a.pk]
+            ),
+            {
+                "gender": "invalid",
+                "email": "not-an-email",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST
+        )
+        self.assertIn("gender", response.data)
         self.assertIn("email", response.data)
